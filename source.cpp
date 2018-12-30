@@ -83,6 +83,7 @@ int			SDL_ColorGetHue(SDL_Color color);
 SDL_Color	averageColor(int, ...);
 SDL_Color	randomColor(void);
 FriendMap	*Life_CreateFriendMap(Dot * dots, int i, int row_length, int array_size);
+void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, int pArraySize);
 
 SDL_Event			event;
 SDL_Color			SOIL_COLOR = { 50,50,100,255 };
@@ -97,12 +98,15 @@ static const int	SCREEN_WIDTH = 400;
 static const int	SCREEN_HEIGHT = 400;
 int					LIVE_COUNT = 0;
 static const int	SOIL_VALUE_LIMIT = 255;
+bool				ANTFARM_ENABLED = 0;
 
 int main(int argc, char * argv[ ])
 {
 	//	Begin loop.
 	while ( running )
 	{
+
+		session_running = true;
 
 		printf("Welcome to a variation of Life by David DeLuca. \nEnter 0 to quit.\n");
 		printf("Enter overpopulation number: ");
@@ -134,124 +138,142 @@ int main(int argc, char * argv[ ])
 			running = false;
 		}
 
+		printf("Enter 1 to display antfarm cell tracker or 0 for blank black background.");
+		ANTFARM_ENABLED = getIntBounded(0, 1, 1);
+		if ( ANTFARM_ENABLED )
+		{
+			printf("ANTFARM ENABLED.\n");
+		}
+		else
+		{
+			printf("BLACK BACKGROUND ENABLED.\n");
+		}
+
 		/*Quit if zero value was entered.*/
 		if ( !session_running || !running )
 		{
 			exit(0);
 		}
-
-		SDL_Init(SDL_INIT_VIDEO);
-
-		srand(time(NULL));
-
-		Dot mainLifeDotArray[ NROWS*NCOLS ];
-		Dot soilDotArray[ NROWS*NCOLS ];
-		Dot updatedLifeDotArray[ NROWS*NCOLS ];
-
-		Life_RandomizeDots(mainLifeDotArray, NROWS*NCOLS, MAX_VALUE + 1);
-		Life_SetAllDots(soilDotArray, NROWS*NCOLS, 128);
-
-		//	Set up the window and renderer.
-		SDL_Window *window = SDL_CreateWindow(
-			"The Game of Life - Alternate Version by David DeLuca",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			SCREEN_WIDTH, SCREEN_HEIGHT,
-			SDL_WINDOW_OPENGL
-		);
-
-		/* Check for null window. */
-		if ( !window )
+		else
+			/*Run the program.*/
 		{
-			SDL_Quit( );
-			exit(1);
-		}
+			SDL_Init(SDL_INIT_VIDEO);
 
-		/* Create renderer, check for null renderer. */
-		SDL_Renderer *renderer = SDL_CreateRenderer(
-			window, -1,
-			SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-		);
+			srand(time(NULL));
 
-		/*Abort if renderer failed to open.*/
-		if ( !renderer )
-		{
-			SDL_DestroyWindow(window);
-			SDL_Quit( );
-			exit(2);
-		}
+			Dot mainLifeDotArray[ NROWS*NCOLS ];
+			Dot soilDotArray[ NROWS*NCOLS ];
+			Dot updatedLifeDotArray[ NROWS*NCOLS ];
 
-		/*Necessary for blending by alpha values.*/
-		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+			Life_RandomizeDots(mainLifeDotArray, NROWS*NCOLS, MAX_VALUE + 1);
+			Life_SetAllDots(soilDotArray, NROWS*NCOLS, 128);
 
-		/*Initialize TTF and check for null font.*/
-		TTF_Init( );
-		TTF_Font *font = TTF_OpenFont("Adore64.ttf", 16);
-		if ( !font )
-		{
-			printf("error was %s\n", TTF_GetError( ));
+			//	Set up the window and renderer.
+			SDL_Window *window = SDL_CreateWindow(
+				"The Game of Life - Alternate Version by David DeLuca",
+				SDL_WINDOWPOS_UNDEFINED,
+				SDL_WINDOWPOS_UNDEFINED,
+				SCREEN_WIDTH, SCREEN_HEIGHT,
+				SDL_WINDOW_OPENGL
+			);
+
+			/* Check for null window. */
+			if ( !window )
+			{
+				SDL_Quit( );
+				exit(1);
+			}
+
+			/* Create renderer, check for null renderer. */
+			SDL_Renderer *renderer = SDL_CreateRenderer(
+				window, -1,
+				SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+			);
+
+			/*Abort if renderer failed to open.*/
+			if ( !renderer )
+			{
+				SDL_DestroyWindow(window);
+				SDL_Quit( );
+				exit(2);
+			}
+
+			/*Necessary for blending by alpha values.*/
+			SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+			/*Initialize TTF and check for null font.*/
+			TTF_Init( );
+			TTF_Font *font = TTF_OpenFont("Adore64.ttf", 16);
+			if ( !font )
+			{
+				printf("error was %s\n", TTF_GetError( ));
+				SDL_DestroyRenderer(renderer);
+				SDL_DestroyWindow(window);
+				SDL_Quit( );
+				exit(3);
+			}
+
+			//	Declare mouse tracking variables.
+			int mouse_x, mouse_y;
+			int key_released = 0;
+
+			while ( session_running && running )
+			{
+				//	Go through the life session.
+
+				time_t start = time(NULL);
+
+				/*Get the event.*/
+				SDL_PollEvent(&event);
+
+				/*Close the program on clock.*/
+				if ( event.type == SDL_QUIT || event.type == SDL_MOUSEBUTTONDOWN )
+				{
+					if ( event.button.clicks == SDL_BUTTON_LEFT )
+					{
+						session_running = false;
+					}
+				}
+
+				/*Track the mouse position.*/
+				if ( event.type == SDL_MOUSEMOTION )
+				{
+					SDL_GetMouseState(&mouse_x, &mouse_y);
+					Life_PutHandOfGodAtXY(mouse_x, mouse_y, mainLifeDotArray);
+				}
+
+				/* Update all dots. */
+				Life_IterateGeneration(mainLifeDotArray, updatedLifeDotArray);
+				if ( ANTFARM_ENABLED )
+					Life_UpdateSoil(mainLifeDotArray, soilDotArray);
+
+				/* Draw everything.*/
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+				SDL_RenderClear(renderer);
+				if ( ANTFARM_ENABLED )
+					Life_DrawSoil(soilDotArray, renderer);
+				Life_DrawAllDots(mainLifeDotArray, renderer);
+
+				//	Draw text over the screen.
+				SDL_Color cWhite = { 255,255,255 };
+				char displayText[ 100 ];
+				sprintf_s(displayText, "live cells: %d", LIVE_COUNT);
+				SDL_DrawTextShadow(renderer, displayText, font, 2, 2, cWhite, 1);
+
+				SDL_RenderPresent(renderer);
+
+				/*Delay for specified ms.*/
+				SDL_Delay(DELAY_VALUE - ( time(NULL) - start ));
+			}
+
+			/*Quit everything.*/
 			SDL_DestroyRenderer(renderer);
 			SDL_DestroyWindow(window);
 			SDL_Quit( );
-			exit(3);
+			TTF_Quit( );
+
 		}
 
-		//	Declare mouse tracking variables.
-		int mouse_x, mouse_y;
-		int key_released = 0;
-
-		while ( session_running && running )
-		{
-		//	Go through the life session.
-
-			time_t start = time(NULL);
-
-			/*Get the event.*/
-			SDL_PollEvent(&event);
-
-			/*Close the program on clock.*/
-			if ( event.type == SDL_QUIT || event.type == SDL_MOUSEBUTTONDOWN )
-			{
-				if ( event.button.clicks == SDL_BUTTON_LEFT )
-				{
-					session_running = false;
-				}
-			}
-
-			/*Track the mouse position.*/
-			if ( event.type == SDL_MOUSEMOTION )
-			{
-				SDL_GetMouseState(&mouse_x, &mouse_y);
-				Life_PutHandOfGodAtXY(mouse_x, mouse_y, mainLifeDotArray);
-			}
-
-			/* Update all dots. */
-			Life_IterateGeneration(mainLifeDotArray, updatedLifeDotArray);
-			Life_UpdateSoil(mainLifeDotArray, soilDotArray);
-
-			/* Draw everything.*/
-			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-			SDL_RenderClear(renderer);
-			Life_DrawSoil(soilDotArray, renderer);
-			Life_DrawAllDots(mainLifeDotArray, renderer);
-
-			//	Draw text over the screen.
-			SDL_Color cWhite = { 255,255,255 };
-			char displayText[ 100 ];
-			sprintf_s(displayText, "live cells: %d", LIVE_COUNT);
-			SDL_DrawTextShadow(renderer, displayText, font, 2, 2, cWhite, 1);
-
-			SDL_RenderPresent(renderer);
-
-			/*Delay for specified ms.*/
-			SDL_Delay(DELAY_VALUE - ( time(NULL) - start ));
-		}
-
-		/*Quit everything.*/
-		SDL_DestroyRenderer(renderer);
-		SDL_DestroyWindow(window);
-		SDL_Quit( );
-		TTF_Quit( );
 	}
 	return 0;
 }
@@ -375,8 +397,15 @@ int Life_GetIndexByXY(int x, int y, int screenw, int screenh, int cols_per_row)
 /*Revive a dot at a certain index in the dot array.*/
 void Life_ActivateDotByIndex(int i, Dot * dots)
 {
-	dots[ i ].value = 1;
-	LIVE_COUNT++;
+	if ( !dots[ i ].value )
+	{
+		dots[ i ].value = 1;
+		LIVE_COUNT++;
+	}
+	else
+	{
+		/*Do nothing!*/
+	}
 }
 
 /*Kill a dot at a certain index in the dot array.*/
@@ -807,21 +836,21 @@ void SDL_ColorAdjHSV(SDL_Color * pColor, double pHueAmount, double pSatAmount, d
 int SDL_ColorGetHue(SDL_Color pColor)
 {
 	hsv colorAsHSV = rgb2hsv({ ( double ) pColor.r / 255,( double ) pColor.g / 255,( double ) pColor.b / 255 });
-	return ( int ) colorAsHSV.h/360 * 255;
+	return ( int ) (colorAsHSV.h/360 * 255);
 }
 
 /*Get a color's value*/
 int SDL_ColorGetVal(SDL_Color pColor)
 {
 	hsv colorAsHSV = rgb2hsv({ ( double ) pColor.r / 255,( double ) pColor.g / 255,( double ) pColor.b / 255 });
-	return ( int ) colorAsHSV.h * 255;
+	return ( int ) (colorAsHSV.v * 255);
 }
 
 /*Get a color's saturation*/
 int SDL_ColorGetSat(SDL_Color pColor)
 {
 	hsv colorAsHSV = rgb2hsv({ ( double ) pColor.r / 255,( double ) pColor.g / 255,( double ) pColor.b / 255 });
-	return ( int ) colorAsHSV.s * 255;
+	return ( int ) (colorAsHSV.s * 255);
 }
 
 /*Deallocate memory for friend map and dot array internal to friend map structure.*/
