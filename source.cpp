@@ -21,6 +21,10 @@ using namespace std;
 #define GRADUALLY_INCREASE_COLOR 0
 #define CHANCE_OF_MIRACLE 1000000000000000
 #define HAND_OF_GOD_SIZE 2
+#define PHI 0.61803398875
+#define PI 3.14159265359
+#define	MAX_BUTTON_STRING_LENGTH 128
+
 
 typedef struct
 {
@@ -34,6 +38,72 @@ typedef struct
 	double count;
 	Dot * dotArray;
 } FriendMap;
+
+enum ButtonMouseoverTintStyle
+{
+	BUTTON_MOUSEOVER_TINTSTYLE_GRADUAL,
+	BUTTON_MOUSEOVER_TINTSTYLE_INSTANT,
+	BUTTON_MOUSEOVER_TINTSTYLE_NONE
+};
+
+enum ButtonPositionStyle
+{
+	BUTTON_POSITION_UNDEFINED,
+	BUTTON_POSITION_FIXED
+};
+
+enum ButtonTextAlignment
+{
+	BUTTON_TEXT_ALIGNMENT_LEFT,
+	BUTTON_TEXT_ALIGNMENT_CENTERED,
+	BUTTON_TEXT_ALIGNMENT_RIGHT
+};
+
+enum ButtonFadeState
+{
+	BUTTON_FADE_STATE_STATIC,
+	BUTTON_FADE_STATE_FADING_IN,
+	BUTTON_FADE_STATE_FADING_OUT
+};
+
+
+typedef struct
+{
+	int			x;
+	int			y;
+	int			w;
+	int			h;
+	int			buttonPadding;
+	TTF_Font	*buttonFont;
+	SDL_Color	buttonTextColor;
+	SDL_Color	buttonBackgroundColor;
+	SDL_Color	buttonShadowColor;
+	SDL_Color	buttonOutlineColor;
+	SDL_Color	buttonMouseoverTintColor;
+	Uint8		buttonTotalOpacity;
+	Uint8		shadowOpacity;
+	int			fadeValue;
+	int			fadeSpeed;
+	enum		ButtonFadeState buttonFadeState;
+	bool		shadowEnabled;
+	bool		outlineEnabled;
+	bool		buttonMouseoverTintEnabled;
+	enum		ButtonMouseoverTintStyle buttonMouseoverTintStyle;
+	enum		ButtonTextAlignment pButtonTextAlignment;
+	char		buttonText[ MAX_BUTTON_STRING_LENGTH ];
+	int			shadowOffset;
+	bool		isActive;
+} SDL_CustomButton;
+
+/*Button default values*/
+TTF_Font	*DEFAULT_BUTTON_FONT;
+const int	DEFAULT_BUTTON_PADDING = 5;
+SDL_Color	DEFAULT_BUTTON_TEXT_COLOR = { 0,0,0,255 };
+SDL_Color	DEFAULT_BUTTON_BG_COLOR = { 255,255,255,255 };
+SDL_Color	DEFAULT_BUTTON_MO_TINT_COLOR = { 255,0,0,255 };
+SDL_Color	DEFAULT_BUTTON_MO_OUTLINE_COLOR = { 128,128,128,255 };
+SDL_Color	DEFAULT_BUTTON_SHADOW_COLOR = { 0,0,0,255 };
+enum ButtonTextAlignment DEFAULT_BUTTON_TEXT_ALIGNMENT = BUTTON_TEXT_ALIGNMENT_CENTERED;
 
 typedef struct
 {
@@ -84,6 +154,31 @@ SDL_Color	averageColor(int, ...);
 SDL_Color	randomColor(void);
 FriendMap	*Life_CreateFriendMap(Dot * dots, int i, int row_length, int array_size);
 void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, int pArraySize);
+SDL_CustomButton SDL_CreateStandardButton(int x, int y, int w, int h, const char * pButtonText);
+SDL_CustomButton SDL_CreateButtonDetailed(
+	int							x,
+	int							y,
+	int							w,
+	int							h,
+	enum ButtonPositionStyle	pButtonXPositionStyle,
+	enum ButtonPositionStyle	pButtonYPositionStyle,
+	const char		 			*pButtonText,
+	enum ButtonTextAlignment	pButtonTextAlignment,
+	TTF_Font					* pButtonFont,
+	int							pButtonPadding,
+	SDL_Color					pButtonTextColor,
+	SDL_Color					pButtonBackgroundColor,
+	SDL_Color					pButtonMouseoverTintColor,
+	SDL_Color					pButtonOutlineColor,
+	SDL_Color					pButtonShadowColor,
+	bool						pButtonShadowEnabled,
+	bool						pButtonMouseoverTintEnabled,
+	bool						pButtonOutlineEnabled,
+	Uint8						pButtonTotalOpacity,
+	int							pShadowOffset
+);
+void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton);
+void SDL_UpdateButton(SDL_CustomButton * pButton);
 
 SDL_Event			event;
 SDL_Color			SOIL_COLOR = { 50,50,100,255 };
@@ -156,7 +251,9 @@ int main(int argc, char * argv[ ])
 		}
 		else
 			/*Run the program.*/
+
 		{
+
 			SDL_Init(SDL_INIT_VIDEO);
 
 			srand(time(NULL));
@@ -212,10 +309,17 @@ int main(int argc, char * argv[ ])
 				SDL_Quit( );
 				exit(3);
 			}
+			else
+			{
+				DEFAULT_BUTTON_FONT = font;
+			}
 
 			//	Declare mouse tracking variables.
 			int mouse_x, mouse_y;
 			int key_released = 0;
+
+			SDL_CustomButton quitButton = SDL_CreateStandardButton(50, 50, -1, -1, "Quit");
+			quitButton.fadeSpeed = 50;
 
 			while ( session_running && running )
 			{
@@ -247,6 +351,9 @@ int main(int argc, char * argv[ ])
 				if ( ANTFARM_ENABLED )
 					Life_UpdateSoil(mainLifeDotArray, soilDotArray);
 
+				/*Update the button(s)*/
+				SDL_UpdateButton(&quitButton);
+
 				/* Draw everything.*/
 				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 				SDL_RenderClear(renderer);
@@ -259,6 +366,8 @@ int main(int argc, char * argv[ ])
 				char displayText[ 100 ];
 				sprintf_s(displayText, "live cells: %d", LIVE_COUNT);
 				SDL_DrawTextShadow(renderer, displayText, font, 2, 2, cWhite, 1);
+
+				SDL_RenderButton(renderer, quitButton);
 
 				SDL_RenderPresent(renderer);
 
@@ -636,6 +745,193 @@ void Life_CalculateAllNewDotValues(Dot * dots, Dot * new_dots)
 	}
 }
 
+/* (WRAPPER) Create and return a button*/
+SDL_CustomButton SDL_CreateStandardButton(int x, int y, int w, int h, const char * pButtonText)
+{
+	SDL_CustomButton btn = SDL_CreateButtonDetailed(
+		x,y,-1,-1,
+		BUTTON_POSITION_FIXED,
+		BUTTON_POSITION_FIXED,
+		pButtonText,
+		DEFAULT_BUTTON_TEXT_ALIGNMENT,
+		DEFAULT_BUTTON_FONT,
+		DEFAULT_BUTTON_PADDING,
+		DEFAULT_BUTTON_TEXT_COLOR,
+		DEFAULT_BUTTON_BG_COLOR,
+		DEFAULT_BUTTON_MO_TINT_COLOR,
+		DEFAULT_BUTTON_MO_OUTLINE_COLOR,
+		DEFAULT_BUTTON_SHADOW_COLOR,
+		true,
+		true,
+		false,
+		255,
+		5
+	);
+	return btn;
+}
+
+/*Create and return a button with a lot of customizable features*/
+SDL_CustomButton SDL_CreateButtonDetailed(
+	int							x, 
+	int							y, 
+	int							w, 
+	int							h,
+	enum ButtonPositionStyle	pButtonXPositionStyle,
+	enum ButtonPositionStyle	pButtonYPositionStyle,
+	const char					*pButtonText,
+	enum ButtonTextAlignment	pButtonTextAlignment,
+	TTF_Font					*pButtonFont,
+	int							pButtonPadding,
+	SDL_Color					pButtonTextColor,
+	SDL_Color					pButtonBackgroundColor,
+	SDL_Color					pButtonMouseoverTintColor,
+	SDL_Color					pButtonOutlineColor,
+	SDL_Color					pButtonShadowColor,
+	bool						pButtonShadowEnabled,
+	bool						pButtonMouseoverTintEnabled,
+	bool						pButtonOutlineEnabled,
+	Uint8						pButtonTotalOpacity,
+	int							pShadowOffset
+)
+{
+
+	SDL_CustomButton btn;
+
+	/*Set colors*/
+	btn.buttonTextColor = pButtonTextColor;
+	btn.buttonBackgroundColor = pButtonBackgroundColor;
+	btn.buttonMouseoverTintColor = pButtonMouseoverTintColor;
+	btn.buttonOutlineColor = pButtonOutlineColor;
+	btn.buttonShadowColor.a = ( int ) ( ( double ) pButtonTotalOpacity / 255 * ( double ) 128 / 255 );
+
+	/*Set font*/
+	btn.buttonFont = pButtonFont;
+
+	/*Set formatting flags*/
+	btn.buttonMouseoverTintEnabled = pButtonMouseoverTintEnabled;
+	btn.buttonTotalOpacity = pButtonTotalOpacity;
+	btn.shadowEnabled = pButtonShadowEnabled;
+	btn.buttonPadding = getMin(0,pButtonPadding);
+	btn.outlineEnabled = pButtonOutlineEnabled;
+	btn.shadowOffset = pShadowOffset;
+
+	/*Set fade values*/
+	btn.buttonFadeState = BUTTON_FADE_STATE_FADING_IN;
+	btn.fadeSpeed = -1;
+	btn.fadeValue = 0;
+
+	/*Set text*/
+	if ( !strcmp(pButtonText, "") )
+	{
+		sprintf_s(btn.buttonText, 128, "%s", "[...]");
+	}
+	else
+	{
+		sprintf_s(btn.buttonText, 128, "%s", pButtonText);
+	}
+
+	/*Set width and height*/
+	int tmpW, tmpH;
+	TTF_SizeText(pButtonFont, pButtonText, &tmpW, &tmpH); //	might use these
+	if ( w < 0 )
+	{
+		btn.w = tmpW + pButtonPadding * 2;
+	}
+	else
+	{
+		btn.w = w;
+	}
+	if ( h < 0 )
+	{
+		btn.h = tmpH + pButtonPadding * 2;
+	}
+	else
+	{
+		btn.h = h;
+	}
+
+	/*Set x position*/
+	if ( pButtonXPositionStyle = BUTTON_POSITION_UNDEFINED )
+	{
+		btn.x = SCREEN_WIDTH / 2 - btn.w / 2;
+	}
+	else
+	{
+		btn.x = x;
+	}
+
+	/*Set y position*/
+	if ( pButtonYPositionStyle = BUTTON_POSITION_UNDEFINED )
+	{
+		btn.y = SCREEN_HEIGHT / 2 - btn.h / 2;
+	}
+	else
+	{
+		btn.y = y;
+	}
+
+	/*Return the button*/
+	return btn;
+}
+
+/*Render a button*/
+void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton)
+{
+	double fadeFactor = ( double ) pButton.fadeValue / 255;
+	if ( pButton.shadowEnabled )
+	{
+		SDL_Color actualShadowColor = pButton.buttonShadowColor;
+		actualShadowColor.a *= fadeFactor;
+		actualShadowColor.a *= (double)(pButton.buttonTotalOpacity) / 255;
+		/*Draw the shadow behind the button*/
+		SDL_DrawFillRectHelper(pRenderer, pButton.x + pButton.shadowOffset, pButton.y + pButton.shadowOffset, pButton.w, pButton.h, actualShadowColor);
+	}
+	/*Create new colors for button text and button body depending on fade state and total opacity*/
+	SDL_Color actualButtonColor = pButton.buttonBackgroundColor;
+	SDL_Color actualButtonTextColor = pButton.buttonTextColor;
+	Uint8 actualOpacity = ( Uint8 ) ( pButton.buttonTotalOpacity*fadeFactor );
+	actualButtonColor.a = actualOpacity;
+	actualButtonTextColor.a = actualOpacity;
+	/*Draw the actual button body*/
+	SDL_DrawFillRectHelper(pRenderer, pButton.x, pButton.y, pButton.w, pButton.h, actualButtonColor);
+	SDL_DrawTextAtXY(pRenderer, pButton.buttonText, pButton.buttonFont,pButton.x+pButton.buttonPadding,pButton.y+pButton.buttonPadding, actualButtonTextColor);
+	return;
+}
+
+void SDL_UpdateButton(SDL_CustomButton * pButton)
+{
+	/*Handle button fades*/
+	switch ( pButton->buttonFadeState )
+	{
+	case BUTTON_FADE_STATE_FADING_IN:
+		if ( pButton->fadeValue+pButton->fadeSpeed < 255 && pButton->fadeSpeed > 0 )
+		{
+			pButton->fadeValue += pButton->fadeSpeed;
+		}
+		else
+		{
+			pButton->fadeValue = 255;
+			pButton->buttonFadeState = BUTTON_FADE_STATE_STATIC;
+		}
+		break;
+	case BUTTON_FADE_STATE_FADING_OUT:
+		if ( pButton->fadeValue-pButton->fadeSpeed > 0 && pButton->fadeSpeed > 0 )
+		{
+			pButton->fadeValue -= pButton->fadeSpeed;
+		}
+		else
+		{
+			pButton->fadeValue = 0;
+			pButton->buttonFadeState = BUTTON_FADE_STATE_STATIC;
+			pButton->isActive = false;
+		}
+		break;
+	case BUTTON_FADE_STATE_STATIC:
+	default:
+		break;
+	}
+}
+
 /* Calculate new value for a single dot in the array.*/
 Dot Life_CalculateNewDotValue(Dot * dots, int i)
 {
@@ -938,7 +1234,7 @@ void Life_DrawDot(Dot * dots, int i, SDL_Renderer * pRenderer, int isSoil)
 
 	if ( dots[ i ].value )
 	{
-		int alpha = (int)(255*0.61803*0.61803); // #goldenratio?!??
+		int alpha = (int)(255*PHI*PHI); // #goldenratio?!??
 
 		/*Draw two extra rectangles behind the white part to simulate glow.*/
 		if ( GLOW_ENABLE && !isSoil )
@@ -994,7 +1290,7 @@ void Life_DrawDot(Dot * dots, int i, SDL_Renderer * pRenderer, int isSoil)
 }
 
 /*Helper function for drawing rectangles.*/
-void SDL_DrawFillRectHelper(SDL_Renderer *renderer, int x, int  y, int w, int h, SDL_Color color)
+void SDL_DrawFillRectHelper(SDL_Renderer *pRenderer, int x, int  y, int w, int h, SDL_Color pColor)
 {
 	SDL_Rect rect;
 	rect.w = w;
@@ -1002,11 +1298,11 @@ void SDL_DrawFillRectHelper(SDL_Renderer *renderer, int x, int  y, int w, int h,
 	rect.x = x;
 	rect.y = y;
 	SDL_SetRenderDrawColor(
-		renderer,
-		color.r,
-		color.g,
-		color.b,
-		color.a
+		pRenderer,
+		pColor.r,
+		pColor.g,
+		pColor.b,
+		pColor.a
 	);
-	SDL_RenderFillRect(renderer, &rect);
+	SDL_RenderFillRect(pRenderer, &rect);
 }
