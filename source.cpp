@@ -469,6 +469,7 @@ int main(int argc, char * argv[ ])
 							FRIEND_RANGE = npNeighborhoodSize->currentValue;
 							REBIRTH_NUMBER = npRebirthThreshold->currentValue;
 							onMainMenu = false;
+							sessionRunning = true;
 						}
 						/*Handle mouseover event*/
 						if ( event.type == SDL_MOUSEMOTION )
