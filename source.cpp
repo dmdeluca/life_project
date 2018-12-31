@@ -97,7 +97,7 @@ typedef struct
 
 /*Button default values*/
 TTF_Font	*DEFAULT_BUTTON_FONT;
-const int	DEFAULT_BUTTON_PADDING = 5;
+const int	DEFAULT_BUTTON_PADDING = 2;
 SDL_Color	DEFAULT_BUTTON_TEXT_COLOR = { 0,0,0,255 };
 SDL_Color	DEFAULT_BUTTON_BG_COLOR = { 255,255,255,255 };
 SDL_Color	DEFAULT_BUTTON_MO_TINT_COLOR = { 255,0,0,255 };
@@ -179,21 +179,24 @@ SDL_CustomButton SDL_CreateButtonDetailed(
 );
 void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton);
 void SDL_UpdateButton(SDL_CustomButton * pButton);
+int SDL_ButtonClicked(SDL_CustomButton * pButton, SDL_Event * e);
+int SDL_MouseInButtonBounds(int x, int y, SDL_CustomButton * pButton);
 
-SDL_Event			event;
-SDL_Color			SOIL_COLOR = { 50,50,100,255 };
-SDL_Color			DOT_COLOR { 255,255,255,255 };
-bool				running = true;
-bool				session_running = true;
-int					OVERPOP_NUMBER;
-int					UNDERPOP_NUMBER;
-int					REBIRTH_NUMBER;
-int					FRIEND_RANGE;
-static const int	SCREEN_WIDTH = 400;
-static const int	SCREEN_HEIGHT = 400;
-int					LIVE_COUNT = 0;
-static const int	SOIL_VALUE_LIMIT = 255;
-bool				ANTFARM_ENABLED = 0;
+SDL_Event				event;
+SDL_MouseButtonEvent	mb_event;
+SDL_Color				SOIL_COLOR = { 50,50,100,255 };
+SDL_Color				DOT_COLOR { 255,255,255,255 };
+bool					running = true;
+bool					session_running = true;
+int						OVERPOP_NUMBER;
+int						UNDERPOP_NUMBER;
+int						REBIRTH_NUMBER;
+int						FRIEND_RANGE;
+static const int		SCREEN_WIDTH = 400;
+static const int		SCREEN_HEIGHT = 400;
+int						LIVE_COUNT = 0;
+static const int		SOIL_VALUE_LIMIT = 255;
+bool					ANTFARM_ENABLED = 0;
 
 int main(int argc, char * argv[ ])
 {
@@ -307,18 +310,34 @@ int main(int argc, char * argv[ ])
 				SDL_DestroyRenderer(renderer);
 				SDL_DestroyWindow(window);
 				SDL_Quit( );
+				TTF_Quit( );
 				exit(3);
 			}
 			else
 			{
-				DEFAULT_BUTTON_FONT = font;
+				/* Do nothing! */
+			}
+
+			TTF_Font *smaller_font = TTF_OpenFont("Adore64.ttf", 12);
+			if ( !smaller_font ) {
+				printf("error was: %s\n", TTF_GetError( ));
+				SDL_DestroyRenderer(renderer);
+				SDL_DestroyWindow(window);
+				TTF_CloseFont(font);
+				TTF_Quit( );
+				SDL_Quit( );
+				exit(4);
+			}
+			else
+			{
+				DEFAULT_BUTTON_FONT = smaller_font;
 			}
 
 			//	Declare mouse tracking variables.
 			int mouse_x, mouse_y;
 			int key_released = 0;
 
-			SDL_CustomButton quitButton = SDL_CreateStandardButton(50, 50, -1, -1, "Quit");
+			SDL_CustomButton quitButton = SDL_CreateStandardButton(10, SCREEN_HEIGHT-25, -1, -1, "Quit Session");
 			quitButton.fadeSpeed = 50;
 
 			while ( session_running && running )
@@ -330,14 +349,15 @@ int main(int argc, char * argv[ ])
 				/*Get the event.*/
 				SDL_PollEvent(&event);
 
-				/*Close the program on clock.*/
-				if ( event.type == SDL_QUIT || event.type == SDL_MOUSEBUTTONDOWN )
-				{
-					if ( event.button.clicks == SDL_BUTTON_LEFT )
-					{
-						session_running = false;
-					}
-				}
+				/*Close the program on click.*/
+
+				//if ( event.type == SDL_QUIT || event.type == SDL_MOUSEBUTTONDOWN )
+				//{
+				//	if ( event.button.clicks == SDL_BUTTON_LEFT )
+				//	{
+				//		session_running = false;
+				//	}
+				//}
 
 				/*Track the mouse position.*/
 				if ( event.type == SDL_MOUSEMOTION )
@@ -351,8 +371,20 @@ int main(int argc, char * argv[ ])
 				if ( ANTFARM_ENABLED )
 					Life_UpdateSoil(mainLifeDotArray, soilDotArray);
 
+				/*Handle click events*/
+				if ( event.type == SDL_MOUSEBUTTONDOWN )
+				{
+					if ( SDL_ButtonClicked(&quitButton, &event) )
+					{
+						session_running = false;
+						break;
+					}
+				}
+
 				/*Update the button(s)*/
 				SDL_UpdateButton(&quitButton);
+
+			
 
 				/* Draw everything.*/
 				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -379,6 +411,8 @@ int main(int argc, char * argv[ ])
 			SDL_DestroyRenderer(renderer);
 			SDL_DestroyWindow(window);
 			SDL_Quit( );
+			TTF_CloseFont(font);
+			TTF_CloseFont(smaller_font);
 			TTF_Quit( );
 
 		}
@@ -877,7 +911,15 @@ SDL_CustomButton SDL_CreateButtonDetailed(
 /*Render a button*/
 void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton)
 {
+	/*Handle mouseover changes*/
+
+	////////////////
+	//	code here //
+	////////////////
+
+	/*Identify fade factor*/
 	double fadeFactor = ( double ) pButton.fadeValue / 255;
+	/*Draw shadow if applicable*/
 	if ( pButton.shadowEnabled )
 	{
 		SDL_Color actualShadowColor = pButton.buttonShadowColor;
@@ -930,6 +972,36 @@ void SDL_UpdateButton(SDL_CustomButton * pButton)
 	default:
 		break;
 	}
+}
+
+/*Returns 1 if button specified has been clicked*/
+int SDL_ButtonClicked( SDL_CustomButton * pButton, SDL_Event * e) 
+{
+	int mouse_x, mouse_y;
+	if ( e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT )
+	{
+		SDL_GetMouseState(&mouse_x, &mouse_y);
+		if ( SDL_MouseInButtonBounds(mouse_x, mouse_y, pButton) )
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/*Returns 1 if mouse is over button specified*/
+int SDL_MouseInButtonBounds(int x, int y, SDL_CustomButton * pButton)
+{
+	if (
+		x >= pButton->x &&
+		x <= pButton->x + pButton->w &&
+		y >= pButton->y &&
+		y <= pButton->y + pButton->h
+		)
+	{
+		return 1;
+	}
+	return 0;
 }
 
 /* Calculate new value for a single dot in the array.*/
