@@ -12,10 +12,10 @@
 
 using namespace std;
 
-#define NROWS 200
-#define NCOLS 200
+#define NROWS 100
+#define NCOLS 100
 #define MAX_VALUE 1
-#define DELAY_VALUE 1000/30
+#define DELAY_VALUE 1
 #define STRONG_THRESHOLD 8
 #define GLOW_ENABLE 1
 #define GRADUALLY_INCREASE_COLOR 0
@@ -66,6 +66,14 @@ enum ButtonFadeState
 	BUTTON_FADE_STATE_FADING_OUT
 };
 
+enum ButtonGeneralState
+{
+	BS_STATIC,
+	BS_MOUSEOVER,
+	BS_CLICK,
+	BS_TOGGLE
+};
+
 
 typedef struct
 {
@@ -85,6 +93,7 @@ typedef struct
 	int			fadeValue;
 	int			fadeSpeed;
 	enum		ButtonFadeState buttonFadeState;
+	enum		ButtonGeneralState buttonState;
 	bool		shadowEnabled;
 	bool		outlineEnabled;
 	bool		buttonMouseoverTintEnabled;
@@ -93,6 +102,12 @@ typedef struct
 	char		buttonText[ MAX_BUTTON_STRING_LENGTH ];
 	int			shadowOffset;
 	bool		isActive;
+	SDL_Color	buttonMouseoverBackgroundColor;
+	SDL_Color	buttonMouseoverTextColor;
+	SDL_Color	buttonClickBackgroundColor;
+	SDL_Color	buttonClickTextColor;
+	SDL_Color	buttonToggleBackgroundColor;
+	SDL_Color	buttonToggleTextColor;
 } SDL_CustomButton;
 
 /*Button default values*/
@@ -181,6 +196,7 @@ void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton);
 void SDL_UpdateButton(SDL_CustomButton * pButton);
 int SDL_ButtonClicked(SDL_CustomButton * pButton, SDL_Event * e);
 int SDL_MouseInButtonBounds(int x, int y, SDL_CustomButton * pButton);
+void SDL_ButtonHandleMouseover(SDL_CustomButton * btn, int mouse_x, int mouse_y);
 
 SDL_Event				event;
 SDL_MouseButtonEvent	mb_event;
@@ -318,7 +334,7 @@ int main(int argc, char * argv[ ])
 				/* Do nothing! */
 			}
 
-			TTF_Font *smaller_font = TTF_OpenFont("Adore64.ttf", 12);
+			TTF_Font *smaller_font = TTF_OpenFont("Adore64.ttf", 8);
 			if ( !smaller_font ) {
 				printf("error was: %s\n", TTF_GetError( ));
 				SDL_DestroyRenderer(renderer);
@@ -347,23 +363,24 @@ int main(int argc, char * argv[ ])
 				time_t start = time(NULL);
 
 				/*Get the event.*/
-				SDL_PollEvent(&event);
-
-				/*Close the program on click.*/
-
-				//if ( event.type == SDL_QUIT || event.type == SDL_MOUSEBUTTONDOWN )
-				//{
-				//	if ( event.button.clicks == SDL_BUTTON_LEFT )
-				//	{
-				//		session_running = false;
-				//	}
-				//}
-
-				/*Track the mouse position.*/
-				if ( event.type == SDL_MOUSEMOTION )
+				if ( SDL_PollEvent(&event) )
 				{
+					/*Track the mouse position.*/
 					SDL_GetMouseState(&mouse_x, &mouse_y);
-					Life_PutHandOfGodAtXY(mouse_x, mouse_y, mainLifeDotArray);
+					if ( event.type == SDL_MOUSEMOTION )
+					{
+						SDL_ButtonHandleMouseover(&quitButton, mouse_x, mouse_y);
+						Life_PutHandOfGodAtXY(mouse_x, mouse_y, mainLifeDotArray);
+					}
+					/*Handle click events*/
+					if ( event.type == SDL_MOUSEBUTTONDOWN )
+					{
+						if ( SDL_ButtonClicked(&quitButton, &event) )
+						{
+							session_running = false;
+							break;
+						}
+					}
 				}
 
 				/* Update all dots. */
@@ -371,20 +388,8 @@ int main(int argc, char * argv[ ])
 				if ( ANTFARM_ENABLED )
 					Life_UpdateSoil(mainLifeDotArray, soilDotArray);
 
-				/*Handle click events*/
-				if ( event.type == SDL_MOUSEBUTTONDOWN )
-				{
-					if ( SDL_ButtonClicked(&quitButton, &event) )
-					{
-						session_running = false;
-						break;
-					}
-				}
-
 				/*Update the button(s)*/
 				SDL_UpdateButton(&quitButton);
-
-			
 
 				/* Draw everything.*/
 				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -400,13 +405,10 @@ int main(int argc, char * argv[ ])
 				SDL_DrawTextShadow(renderer, displayText, font, 2, 2, cWhite, 1);
 
 				SDL_RenderButton(renderer, quitButton);
-
 				SDL_RenderPresent(renderer);
-
 				/*Delay for specified ms.*/
 				SDL_Delay(DELAY_VALUE - ( time(NULL) - start ));
 			}
-
 			/*Quit everything.*/
 			SDL_DestroyRenderer(renderer);
 			SDL_DestroyWindow(window);
@@ -414,9 +416,7 @@ int main(int argc, char * argv[ ])
 			TTF_CloseFont(font);
 			TTF_CloseFont(smaller_font);
 			TTF_Quit( );
-
 		}
-
 	}
 	return 0;
 }
@@ -834,6 +834,12 @@ SDL_CustomButton SDL_CreateButtonDetailed(
 	/*Set colors*/
 	btn.buttonTextColor = pButtonTextColor;
 	btn.buttonBackgroundColor = pButtonBackgroundColor;
+	btn.buttonClickBackgroundColor = pButtonTextColor;
+	btn.buttonClickTextColor = pButtonBackgroundColor;
+	btn.buttonMouseoverBackgroundColor = pButtonTextColor;
+	btn.buttonMouseoverTextColor = pButtonBackgroundColor;
+	btn.buttonToggleBackgroundColor = pButtonTextColor;
+	btn.buttonToggleTextColor = pButtonBackgroundColor;
 	btn.buttonMouseoverTintColor = pButtonMouseoverTintColor;
 	btn.buttonOutlineColor = pButtonOutlineColor;
 	btn.buttonShadowColor.a = ( int ) ( ( double ) pButtonTotalOpacity / 255 * ( double ) 128 / 255 );
@@ -929,8 +935,28 @@ void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton)
 		SDL_DrawFillRectHelper(pRenderer, pButton.x + pButton.shadowOffset, pButton.y + pButton.shadowOffset, pButton.w, pButton.h, actualShadowColor);
 	}
 	/*Create new colors for button text and button body depending on fade state and total opacity*/
-	SDL_Color actualButtonColor = pButton.buttonBackgroundColor;
-	SDL_Color actualButtonTextColor = pButton.buttonTextColor;
+	SDL_Color actualButtonColor;
+	SDL_Color actualButtonTextColor;
+	switch ( pButton.buttonState )
+	{
+	case BS_MOUSEOVER:
+		actualButtonColor = pButton.buttonMouseoverBackgroundColor;
+		actualButtonTextColor = pButton.buttonMouseoverTextColor;
+		break;
+	case BS_CLICK:
+		actualButtonColor = pButton.buttonClickBackgroundColor;
+		actualButtonTextColor = pButton.buttonClickTextColor;
+		break;
+	case BS_TOGGLE: 
+		actualButtonColor = pButton.buttonToggleBackgroundColor;
+		actualButtonTextColor = pButton.buttonToggleTextColor;
+		break;
+	case BS_STATIC:
+	default: 
+		actualButtonColor = pButton.buttonBackgroundColor;
+		actualButtonTextColor = pButton.buttonTextColor;
+		break;
+	}
 	Uint8 actualOpacity = ( Uint8 ) ( pButton.buttonTotalOpacity*fadeFactor );
 	actualButtonColor.a = actualOpacity;
 	actualButtonTextColor.a = actualOpacity;
@@ -940,9 +966,22 @@ void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton)
 	return;
 }
 
+void SDL_ButtonHandleMouseover(SDL_CustomButton * pButton, int mouse_x, int mouse_y)
+{
+	if ( SDL_MouseInButtonBounds(mouse_x, mouse_y, pButton) && pButton->buttonState != BS_CLICK)
+	{
+		pButton->buttonState = BS_MOUSEOVER;
+	}
+	else
+	{
+		pButton->buttonState = BS_STATIC;
+	}
+}
+
 void SDL_UpdateButton(SDL_CustomButton * pButton)
 {
 	/*Handle button fades*/
+
 	switch ( pButton->buttonFadeState )
 	{
 	case BUTTON_FADE_STATE_FADING_IN:
@@ -1315,19 +1354,19 @@ void Life_DrawDot(Dot * dots, int i, SDL_Renderer * pRenderer, int isSoil)
 			SDL_Color color = { dots[ i ].color.r, dots[ i ].color.g, dots[ i ].color.b, alpha };
 			SDL_DrawFillRectHelper(
 				pRenderer,
-				( SCREEN_WIDTH / NCOLS )*( ( i - 1 ) % NCOLS ),
-				( SCREEN_HEIGHT / NROWS )*( ( i ) / NCOLS ),
-				SCREEN_WIDTH / NCOLS * 3,
-				SCREEN_HEIGHT / NROWS,
+				( int ) ( ( double ) SCREEN_WIDTH / NCOLS )*( ( i - 1 ) % NCOLS ),
+				( int ) ( ( double ) SCREEN_HEIGHT / NROWS )*( ( i ) / NCOLS ),
+				( int ) ( ( double ) SCREEN_WIDTH / NCOLS * 3 ),
+				( int ) ( ( double ) SCREEN_HEIGHT / NROWS ),
 				color
 			);
 			/*Draw a 3x1 rectangle*/
 			SDL_DrawFillRectHelper(
 				pRenderer,
-				( SCREEN_WIDTH / NCOLS )*( ( i ) % NCOLS ),
-				( SCREEN_HEIGHT / NROWS )*( ( i ) / NCOLS - 1 ),
-				SCREEN_WIDTH / NCOLS,
-				SCREEN_HEIGHT / NROWS * 3,
+				( int ) ( ( double ) SCREEN_WIDTH / NCOLS )*( ( i ) % NCOLS ),
+				( int ) ( ( double ) SCREEN_HEIGHT / NROWS )*( ( i ) / NCOLS - 1 ),
+				( int ) ( ( double ) SCREEN_WIDTH / NCOLS ),
+				( int ) ( ( double ) SCREEN_HEIGHT / NROWS * 3 ),
 				color
 			);
 		}
@@ -1350,10 +1389,10 @@ void Life_DrawDot(Dot * dots, int i, SDL_Renderer * pRenderer, int isSoil)
 		}
 		SDL_DrawFillRectHelper(
 			pRenderer,
-			( SCREEN_WIDTH / NCOLS )*( ( i ) % NCOLS ),
-			( SCREEN_HEIGHT / NROWS )*( i / NCOLS ),
-			SCREEN_WIDTH / NCOLS,
-			SCREEN_HEIGHT / NROWS,
+			( int ) ( ( double ) SCREEN_WIDTH / NCOLS )*( ( i ) % NCOLS ),
+			( int ) ( ( double ) SCREEN_HEIGHT / NROWS )*( i / NCOLS ),
+			( int ) ( ( double ) SCREEN_WIDTH / NCOLS ),
+			( int ) ( ( double ) SCREEN_HEIGHT / NROWS ),
 			color
 		);
 
