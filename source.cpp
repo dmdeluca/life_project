@@ -12,6 +12,7 @@
 
 using namespace std;
 
+/*Constants*/
 #define NROWS 100
 #define NCOLS 100
 #define MAX_VALUE 1
@@ -25,13 +26,14 @@ using namespace std;
 #define PI 3.14159265359
 #define	MAX_BUTTON_STRING_LENGTH 128
 
-
+/*Dot Structure*/
 typedef struct
 {
 	int value;
 	SDL_Color color;
 } Dot;
 
+/*Friend Map Structure*/
 typedef struct
 {
 	int size;
@@ -39,6 +41,7 @@ typedef struct
 	Dot * dotArray;
 } FriendMap;
 
+/* Button enums*/
 enum ButtonMouseoverTintStyle
 {
 	BUTTON_MOUSEOVER_TINTSTYLE_GRADUAL,
@@ -74,7 +77,7 @@ enum ButtonGeneralState
 	BS_TOGGLE
 };
 
-
+/* Button custom data structure */
 typedef struct
 {
 	int			x;
@@ -110,6 +113,24 @@ typedef struct
 	SDL_Color	buttonToggleTextColor;
 } SDL_CustomButton;
 
+typedef struct
+{
+	SDL_CustomButton *pIncreaseButton;
+	SDL_CustomButton *pDecreaseButton;
+	bool hasShadow;
+	int currentValue;
+	int maxValue;
+	int minValue;
+	int incrementSize;
+	//int *variable;
+	int			x;
+	int			y;
+	int			w;
+	int			h;
+	char caption[ MAX_BUTTON_STRING_LENGTH];
+	TTF_Font * font;
+} SDL_NumberPicker;
+
 /*Button default values*/
 TTF_Font	*DEFAULT_BUTTON_FONT;
 const int	DEFAULT_BUTTON_PADDING = 2;
@@ -120,6 +141,7 @@ SDL_Color	DEFAULT_BUTTON_MO_OUTLINE_COLOR = { 128,128,128,255 };
 SDL_Color	DEFAULT_BUTTON_SHADOW_COLOR = { 0,0,0,255 };
 enum ButtonTextAlignment DEFAULT_BUTTON_TEXT_ALIGNMENT = BUTTON_TEXT_ALIGNMENT_CENTERED;
 
+/*RGB AND HSV STRUCTURES*/
 typedef struct
 {
 	double r;       // a fraction between 0 and 1
@@ -133,6 +155,43 @@ typedef struct
 	double s;       // a fraction between 0 and 1
 	double v;       // a fraction between 0 and 1
 } hsv;
+
+typedef struct
+{
+	SDL_CustomButton * pButtonHead;
+	SDL_CustomButton * pButtonNext;
+} SDL_CustomButtonListItem;
+
+typedef struct
+{
+	SDL_CustomButton * pButtonHead;
+	SDL_CustomButton * pButtonNext;
+} SDL_NumberPickerListContainer;
+
+typedef struct
+{
+	int menuItemType;
+	void * menuItem;
+} SDL_MenuItem;
+
+typedef struct
+{
+	SDL_MenuItem * pMenuHead;
+	int menuItemPadding;
+	SDL_Color menuItemBGColor;
+	int menuTotalWidth;
+	int menuTotalHeight;
+	int menuMargin;
+	int menuItemCount;
+	int menuColumnNumber;
+	int menuLayoutType;
+};
+
+typedef struct
+{
+	SDL_CustomButtonListItem * pButtonListHead;
+	SDL_NumberPickerListContainer * pNumberPickerListContainer;
+} Menu;
 
 static hsv  rgb2hsv(rgb);
 static rgb	hsv2rgb(hsv);
@@ -150,6 +209,7 @@ void		Life_DrawSoil(Dot * dots, SDL_Renderer * renderer);
 void		Life_KillDotByIndex(int i, Dot * dots);
 int			Life_GetIndexByXY(int x, int y, int screenw, int screenh, int cols_per_row);
 void		SDL_DrawTextAtXY(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, SDL_Color color);
+void		SDL_DrawTextAtXYStretched(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color);
 void		SDL_DrawTextShadow(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, SDL_Color color, int doShadow);
 int			getMax(int num, ...);
 int			getMin(int num, ...);
@@ -169,8 +229,8 @@ SDL_Color	averageColor(int, ...);
 SDL_Color	randomColor(void);
 FriendMap	*Life_CreateFriendMap(Dot * dots, int i, int row_length, int array_size);
 void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, int pArraySize);
-SDL_CustomButton SDL_CreateStandardButton(int x, int y, int w, int h, const char * pButtonText);
-SDL_CustomButton SDL_CreateButtonDetailed(
+SDL_CustomButton * SDL_CreateStandardButton(int x, int y, int w, int h, const char * pButtonText);
+SDL_CustomButton * SDL_CreateButtonDetailed(
 	int							x,
 	int							y,
 	int							w,
@@ -192,18 +252,27 @@ SDL_CustomButton SDL_CreateButtonDetailed(
 	Uint8						pButtonTotalOpacity,
 	int							pShadowOffset
 );
-void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton);
+void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton * pButton);
 void SDL_UpdateButton(SDL_CustomButton * pButton);
 int SDL_ButtonClicked(SDL_CustomButton * pButton, SDL_Event * e);
 int SDL_MouseInButtonBounds(int x, int y, SDL_CustomButton * pButton);
 void SDL_ButtonHandleMouseover(SDL_CustomButton * btn, int mouse_x, int mouse_y);
+void SDL_DrawTextAtXYStretchedColorShadow(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color, SDL_Color shadowColor, int offset);
+SDL_NumberPicker * SDL_CreateNumberPicker(int x, int y, int w, int h, int minValue, int maxValue, TTF_Font * font, const char * caption);
+void SDL_DestroyButton(SDL_CustomButton * pButton);
+void SDL_DestroyNumberPicker(SDL_NumberPicker * pNpk);
+void SDL_RenderNumberPicker(SDL_Renderer * pRenderer, SDL_NumberPicker * npk); 
+void SDL_UpdateNumberPicker(SDL_NumberPicker * npk);
+void SDL_NumberPickerHandleMouseover(SDL_NumberPicker * npk, int mouse_x, int mouse_y);
+void SDL_NumberPickerHandleClick(SDL_NumberPicker * npk, SDL_Event *e);
 
+/*Global variables*/
 SDL_Event				event;
 SDL_MouseButtonEvent	mb_event;
 SDL_Color				SOIL_COLOR = { 50,50,100,255 };
 SDL_Color				DOT_COLOR { 255,255,255,255 };
-bool					running = true;
-bool					session_running = true;
+bool					gameRunning = true;
+bool					sessionRunning = true;
 int						OVERPOP_NUMBER;
 int						UNDERPOP_NUMBER;
 int						REBIRTH_NUMBER;
@@ -214,42 +283,42 @@ int						LIVE_COUNT = 0;
 static const int		SOIL_VALUE_LIMIT = 255;
 bool					ANTFARM_ENABLED = 0;
 
+/*Program*/
 int main(int argc, char * argv[ ])
 {
 	//	Begin loop.
-	while ( running )
+	while ( gameRunning )
 	{
-
-		session_running = true;
-
+		sessionRunning = true;
+		/*	
 		printf("Welcome to a variation of Life by David DeLuca. \nEnter 0 to quit.\n");
 		printf("Enter overpopulation number: ");
 		OVERPOP_NUMBER = getIntBounded(0, 100, 1);
 		if ( !OVERPOP_NUMBER )
 		{
-			session_running = false;
-			running = false;
+			sessionRunning = false;
+			gameRunning = false;
 		}
 		printf("Enter underpopulation number: ");
 		UNDERPOP_NUMBER = getIntBounded(0, 100, 1);
 		if ( !UNDERPOP_NUMBER )
 		{
-			session_running = false;
-			running = false;
+			sessionRunning = false;
+			gameRunning = false;
 		}
 		printf("Enter rebirth number: ");
 		REBIRTH_NUMBER = getIntBounded(0, 100, 1);
 		if ( !REBIRTH_NUMBER )
 		{
-			session_running = false;
-			running = false;
+			sessionRunning = false;
+			gameRunning = false;
 		}
 		printf("Enter friend range number: ");
 		FRIEND_RANGE = getIntBounded(0, 10, 1);
 		if ( !FRIEND_RANGE )
 		{
-			session_running = false;
-			running = false;
+			sessionRunning = false;
+			gameRunning = false;
 		}
 
 		printf("Enter 1 to display antfarm cell tracker or 0 for blank black background.");
@@ -261,28 +330,13 @@ int main(int argc, char * argv[ ])
 		else
 		{
 			printf("BLACK BACKGROUND ENABLED.\n");
-		}
+		} */
 
 		/*Quit if zero value was entered.*/
-		if ( !session_running || !running )
-		{
-			exit(0);
-		}
-		else
 			/*Run the program.*/
-
-		{
-
 			SDL_Init(SDL_INIT_VIDEO);
 
 			srand(time(NULL));
-
-			Dot mainLifeDotArray[ NROWS*NCOLS ];
-			Dot soilDotArray[ NROWS*NCOLS ];
-			Dot updatedLifeDotArray[ NROWS*NCOLS ];
-
-			Life_RandomizeDots(mainLifeDotArray, NROWS*NCOLS, MAX_VALUE + 1);
-			Life_SetAllDots(soilDotArray, NROWS*NCOLS, 128);
 
 			//	Set up the window and renderer.
 			SDL_Window *window = SDL_CreateWindow(
@@ -290,7 +344,7 @@ int main(int argc, char * argv[ ])
 				SDL_WINDOWPOS_UNDEFINED,
 				SDL_WINDOWPOS_UNDEFINED,
 				SCREEN_WIDTH, SCREEN_HEIGHT,
-				SDL_WINDOW_OPENGL
+				SDL_WINDOW_OPENGL | SDL_WINDOW_UTILITY //| SDL_WINDOW_ALWAYS_ON_TOP
 			);
 
 			/* Check for null window. */
@@ -335,7 +389,8 @@ int main(int argc, char * argv[ ])
 			}
 
 			TTF_Font *smaller_font = TTF_OpenFont("Adore64.ttf", 8);
-			if ( !smaller_font ) {
+			if ( !smaller_font )
+			{
 				printf("error was: %s\n", TTF_GetError( ));
 				SDL_DestroyRenderer(renderer);
 				SDL_DestroyWindow(window);
@@ -349,77 +404,198 @@ int main(int argc, char * argv[ ])
 				DEFAULT_BUTTON_FONT = smaller_font;
 			}
 
+			TTF_Font *title_font = TTF_OpenFont("Adore64.ttf", 24);
+			if ( !title_font )
+			{
+				printf("error was: %s\n", TTF_GetError( ));
+				SDL_DestroyRenderer(renderer);
+				SDL_DestroyWindow(window);
+				TTF_CloseFont(font);
+				TTF_Quit( );
+				SDL_Quit( );
+				exit(4);
+			}
+
+
+			Dot mainLifeDotArray[ NROWS*NCOLS ];
+			Dot soilDotArray[ NROWS*NCOLS ];
+			Dot updatedLifeDotArray[ NROWS*NCOLS ];
+			Life_RandomizeDots(mainLifeDotArray, NROWS*NCOLS, MAX_VALUE + 1);
+			Life_SetAllDots(soilDotArray, NROWS*NCOLS, 128);
+
 			//	Declare mouse tracking variables.
 			int mouse_x, mouse_y;
 			int key_released = 0;
+			int onMainMenu = true;
 
-			SDL_CustomButton quitButton = SDL_CreateStandardButton(10, SCREEN_HEIGHT-25, -1, -1, "Quit Session");
-			quitButton.fadeSpeed = 50;
+			SDL_CustomButton * mainMenuButton = SDL_CreateStandardButton(10, SCREEN_HEIGHT - 25, -1, -1, "<< MAIN MENU");
+			mainMenuButton->fadeSpeed = 50;
 
-			while ( session_running && running )
+			SDL_CustomButton * quitProgramButton = SDL_CreateStandardButton(SCREEN_WIDTH-104, SCREEN_HEIGHT - 25, 96, 32, "Exit Program");
+
+			SDL_NumberPicker * npUnderpopulationThreshold = SDL_CreateNumberPicker(10, 150, 60, 20, 0, 9, font, "Underpopulation Threshold");
+			npUnderpopulationThreshold->currentValue = UNDERPOP_NUMBER;
+			SDL_NumberPicker * npOverpopulationThreshold = SDL_CreateNumberPicker(10, 150+25*1, 60, 20, 0, 9, font, "Overpopulation Threshold");
+			npOverpopulationThreshold->currentValue = OVERPOP_NUMBER;
+			SDL_NumberPicker * npRebirthThreshold = SDL_CreateNumberPicker(10, 150 + 25 * 2, 60, 20, 0, 9, font, "Birth Threshold");
+			npRebirthThreshold->currentValue = REBIRTH_NUMBER;
+			SDL_NumberPicker * npNeighborhoodSize = SDL_CreateNumberPicker(10, 150 + 25 * 3, 60, 20, 0, 9, font, "Neighborhood Size");
+			npNeighborhoodSize->currentValue = FRIEND_RANGE;
+
+			const int TITLEHEIGHT = 64;
+			const int MARGIN = 10;
+			const int ELEMENTSPACE = 8;
+			const int SUBTITLEHEIGHT = 20;
+
+			SDL_Color cWhite = { 255,255,255,255 };
+			SDL_Color cGray = { 128,128,128,255 };
+			SDL_Color cDkGray = { 64,64,64,255 };
+
+			while ( gameRunning )
 			{
-				//	Go through the life session.
-
-				time_t start = time(NULL);
-
-				/*Get the event.*/
-				if ( SDL_PollEvent(&event) )
+				while ( onMainMenu )
 				{
-					/*Track the mouse position.*/
-					SDL_GetMouseState(&mouse_x, &mouse_y);
-					if ( event.type == SDL_MOUSEMOTION )
+					/* MAIN MENU GUI*/
+					/*Get the event.*/
+					if ( SDL_PollEvent(&event) )
 					{
-						SDL_ButtonHandleMouseover(&quitButton, mouse_x, mouse_y);
-						Life_PutHandOfGodAtXY(mouse_x, mouse_y, mainLifeDotArray);
-					}
-					/*Handle click events*/
-					if ( event.type == SDL_MOUSEBUTTONDOWN )
-					{
-						if ( SDL_ButtonClicked(&quitButton, &event) )
+						/*Track the mouse position.*/
+						SDL_GetMouseState(&mouse_x, &mouse_y);
+						if ( event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE )
 						{
-							session_running = false;
-							break;
+							/*Take the values from the number pickers and update our global variables.*/
+							UNDERPOP_NUMBER = npUnderpopulationThreshold->currentValue;
+							OVERPOP_NUMBER = npOverpopulationThreshold->currentValue;
+							FRIEND_RANGE = npNeighborhoodSize->currentValue;
+							REBIRTH_NUMBER = npRebirthThreshold->currentValue;
+							onMainMenu = false;
+						}
+						/*Handle mouseover event*/
+						if ( event.type == SDL_MOUSEMOTION )
+						{
+							SDL_NumberPickerHandleMouseover(npUnderpopulationThreshold, mouse_x, mouse_y);
+							SDL_NumberPickerHandleMouseover(npOverpopulationThreshold, mouse_x, mouse_y);
+							SDL_NumberPickerHandleMouseover(npRebirthThreshold, mouse_x, mouse_y);
+							SDL_NumberPickerHandleMouseover(npNeighborhoodSize, mouse_x, mouse_y);
+							SDL_ButtonHandleMouseover(quitProgramButton, mouse_x, mouse_y);
+						}
+						/*Handle click events*/
+						if ( event.type == SDL_MOUSEBUTTONDOWN )
+						{
+							SDL_NumberPickerHandleClick(npUnderpopulationThreshold, &event);
+							SDL_NumberPickerHandleClick(npOverpopulationThreshold, &event);
+							SDL_NumberPickerHandleClick(npRebirthThreshold, &event);
+							SDL_NumberPickerHandleClick(npNeighborhoodSize, &event);
+							if ( SDL_ButtonClicked(quitProgramButton, &event) )
+							{
+								gameRunning = false;
+								break;
+							}
 						}
 					}
+
+					SDL_UpdateNumberPicker(npUnderpopulationThreshold);
+					SDL_UpdateNumberPicker(npOverpopulationThreshold);
+					SDL_UpdateNumberPicker(npRebirthThreshold);
+					SDL_UpdateNumberPicker(npNeighborhoodSize);
+					SDL_UpdateButton(quitProgramButton);
+
+					/* Clear screen.*/
+					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+					SDL_RenderClear(renderer);
+
+					/*Draw everything*/
+					SDL_DrawTextAtXYStretchedColorShadow(renderer, "Conway's", title_font, MARGIN, MARGIN, 128, MARGIN * 2 - 4, cWhite, cGray, 1);
+					SDL_DrawTextAtXYStretchedColorShadow(renderer, "GAME OF LIFE", title_font, MARGIN, MARGIN * 2 + ELEMENTSPACE, SCREEN_WIDTH - MARGIN * 2, TITLEHEIGHT, cWhite, cGray, 4);
+					SDL_DrawTextAtXYStretchedColorShadow(renderer, "IN FULL TEKNIKOLOR", title_font, MARGIN, MARGIN * 2 + ELEMENTSPACE + TITLEHEIGHT, SCREEN_WIDTH - MARGIN * 2, SUBTITLEHEIGHT, cWhite, cGray, 2);
+
+					SDL_RenderButton(renderer, quitProgramButton);
+					SDL_RenderNumberPicker(renderer, npUnderpopulationThreshold);
+					SDL_RenderNumberPicker(renderer, npOverpopulationThreshold);
+					SDL_RenderNumberPicker(renderer, npRebirthThreshold);
+					SDL_RenderNumberPicker(renderer, npNeighborhoodSize);
+					SDL_RenderPresent(renderer);
 				}
 
-				/* Update all dots. */
-				Life_IterateGeneration(mainLifeDotArray, updatedLifeDotArray);
-				if ( ANTFARM_ENABLED )
-					Life_UpdateSoil(mainLifeDotArray, soilDotArray);
+				/* Life session loop */
 
-				/*Update the button(s)*/
-				SDL_UpdateButton(&quitButton);
+				while ( sessionRunning && gameRunning )
+				{
+					//	Go through the life session.
 
-				/* Draw everything.*/
-				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-				SDL_RenderClear(renderer);
-				if ( ANTFARM_ENABLED )
-					Life_DrawSoil(soilDotArray, renderer);
-				Life_DrawAllDots(mainLifeDotArray, renderer);
+					time_t start = time(NULL);
 
-				//	Draw text over the screen.
-				SDL_Color cWhite = { 255,255,255 };
-				char displayText[ 100 ];
-				sprintf_s(displayText, "live cells: %d", LIVE_COUNT);
-				SDL_DrawTextShadow(renderer, displayText, font, 2, 2, cWhite, 1);
+					/*Get the event.*/
+					if ( SDL_PollEvent(&event) )
+					{
+						/*Track the mouse position.*/
+						SDL_GetMouseState(&mouse_x, &mouse_y);
+						if ( event.type == SDL_MOUSEMOTION )
+						{
+							SDL_ButtonHandleMouseover(mainMenuButton, mouse_x, mouse_y);
+							Life_PutHandOfGodAtXY(mouse_x, mouse_y, mainLifeDotArray);
+						}
+						/*Handle click events*/
+						if ( event.type == SDL_MOUSEBUTTONDOWN )
+						{
+							if ( SDL_ButtonClicked(mainMenuButton, &event) )
+							{
+								sessionRunning = false;
+								onMainMenu = true;
+								break;
+							}
+						}
+					}
 
-				SDL_RenderButton(renderer, quitButton);
-				SDL_RenderPresent(renderer);
-				/*Delay for specified ms.*/
-				SDL_Delay(DELAY_VALUE - ( time(NULL) - start ));
+					/* Update all dots. */
+					Life_IterateGeneration(mainLifeDotArray, updatedLifeDotArray);
+					if ( ANTFARM_ENABLED )
+						Life_UpdateSoil(mainLifeDotArray, soilDotArray);
+
+					/*Update the button(s)*/
+					SDL_UpdateButton(mainMenuButton);
+
+					/* Clear screen.*/
+					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+					SDL_RenderClear(renderer);
+
+					/*Draw everything*/
+					if ( ANTFARM_ENABLED )
+						Life_DrawSoil(soilDotArray, renderer);
+					Life_DrawAllDots(mainLifeDotArray, renderer);
+
+					//	Draw text over the screen.
+					SDL_Color cWhite = { 255,255,255 };
+					char displayText[ 100 ];
+					sprintf_s(displayText, "live cells: %d", LIVE_COUNT);
+					SDL_DrawTextShadow(renderer, displayText, font, 2, 2, cWhite, 1);
+
+					SDL_RenderButton(renderer, mainMenuButton);
+					SDL_RenderPresent(renderer);
+					/*Delay for specified ms.*/
+					SDL_Delay(DELAY_VALUE - ( time(NULL) - start ));
+				}
 			}
+
 			/*Quit everything.*/
 			SDL_DestroyRenderer(renderer);
 			SDL_DestroyWindow(window);
 			SDL_Quit( );
+			SDL_DestroyButton(mainMenuButton);
+			SDL_DestroyNumberPicker(npUnderpopulationThreshold);
+			SDL_DestroyNumberPicker(npOverpopulationThreshold);
+			SDL_DestroyNumberPicker(npRebirthThreshold);
+			SDL_DestroyNumberPicker(npNeighborhoodSize);
 			TTF_CloseFont(font);
 			TTF_CloseFont(smaller_font);
 			TTF_Quit( );
 		}
+		
+
+		return 0;
+
 	}
-	return 0;
-}
+
 
 void Life_UpdateSoil(Dot * pLifeDotArray, Dot * pSoilDotArray)
 {
@@ -488,8 +664,16 @@ void clearKeyboardBuffer(void)
 	}
 }
 
-/*Draw text on the screen*/
+/* WRAPPER Draw text on the screen*/
 void SDL_DrawTextAtXY(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, SDL_Color color)
+{
+	int w, h;
+	TTF_SizeText(font, string, &w, &h);
+	SDL_DrawTextAtXYStretched(renderer, string, font, x, y, w, h, color);
+}
+
+/* Draw text on the screen stretched to a certain width w and height h in pixels.*/
+void SDL_DrawTextAtXYStretched(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color)
 {
 
 	SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, string, color);
@@ -497,12 +681,22 @@ void SDL_DrawTextAtXY(SDL_Renderer * renderer, const char * string, TTF_Font * f
 	SDL_Rect Message_rect; //create a rect
 	Message_rect.x = x;  //controls the rect's x coordinate 
 	Message_rect.y = y; // controls the rect's y coordinte
-	TTF_SizeText(font, string, &Message_rect.w, &Message_rect.h);
+	//TTF_SizeText(font, string, &Message_rect.w, &Message_rect.h);
+	Message_rect.w = w;
+	Message_rect.h = h;
 
 	SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
 
 	SDL_DestroyTexture(Message);
 	SDL_FreeSurface(surfaceMessage);
+}
+
+void SDL_DrawTextAtXYStretchedColorShadow(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color, SDL_Color shadowColor, int offset)
+{
+	/*Draw shadow*/
+	SDL_DrawTextAtXYStretched(renderer, string, font, x+offset, y+offset, w, h, shadowColor);
+	/*Draw foreground*/
+	SDL_DrawTextAtXYStretched(renderer, string, font, x, y, w, h, color);
 }
 
 /*Draw text on the screen with an optional shadow.*/
@@ -779,11 +973,87 @@ void Life_CalculateAllNewDotValues(Dot * dots, Dot * new_dots)
 	}
 }
 
-/* (WRAPPER) Create and return a button*/
-SDL_CustomButton SDL_CreateStandardButton(int x, int y, int w, int h, const char * pButtonText)
+SDL_NumberPicker * SDL_CreateNumberPicker(int x, int y, int w, int h, int minValue, int maxValue, TTF_Font * font, const char * caption)
 {
-	SDL_CustomButton btn = SDL_CreateButtonDetailed(
-		x,y,-1,-1,
+	SDL_NumberPicker * npk = ( SDL_NumberPicker* ) malloc(sizeof(SDL_NumberPicker));
+	npk->h = h;
+	npk->w = w;
+	npk->x = x;
+	npk->y = y;
+	npk->font = font;
+	npk->minValue = minValue;
+	npk->maxValue = maxValue;
+	npk->currentValue = minValue;
+	npk->incrementSize = 1;
+	sprintf_s(npk->caption, MAX_BUTTON_STRING_LENGTH,"%s",caption);
+	npk->hasShadow = 1;
+	int padding = 2;
+	npk->pDecreaseButton = SDL_CreateStandardButton(npk->x+padding, npk->y+padding, (int)((double) npk->w / 3)-padding*2, npk->h-padding*2, "-");
+	npk->pDecreaseButton->buttonPadding = padding;
+	npk->pIncreaseButton = SDL_CreateStandardButton(npk->x + padding + (int)((double)npk->w / 3), npk->y + padding, (int)((double) npk->w / 3-padding*2), npk->h-padding*2, "+");
+	npk->pIncreaseButton->buttonPadding = padding;
+	return npk;
+}
+
+void SDL_RenderNumberPicker(SDL_Renderer * pRenderer, SDL_NumberPicker * npk)
+{
+	if ( npk->hasShadow )
+	{
+		/*Render number picker background*/
+		SDL_Color shadowColor = { 100,100,100,(Uint8)128 };
+		SDL_DrawFillRectHelper(pRenderer, npk->x+2, npk->y+2, npk->w, npk->h, shadowColor);
+	}
+	/*Render number picker background*/
+	SDL_DrawFillRectHelper(pRenderer, npk->x, npk->y, npk->w, npk->h, {100,100,100,255});
+	SDL_RenderButton(pRenderer, npk->pIncreaseButton);
+	SDL_RenderButton(pRenderer, npk->pDecreaseButton);
+	char * string = (char*)malloc(4*sizeof(char));
+	_ltoa_s(npk->currentValue, string,4, 10);
+	SDL_DrawTextAtXYStretched(
+		pRenderer, 
+		string, 
+		npk->font, 
+		npk->pIncreaseButton->buttonPadding+npk->x + ( int ) ( ( double ) npk->w * 2 / ( double ) 3 ), 
+		npk->pIncreaseButton->buttonPadding+npk->y,
+		( int ) ( ( double ) npk->w / ( double ) 3 ) - npk->pIncreaseButton->buttonPadding * 2,
+		npk->h - npk->pIncreaseButton->buttonPadding * 2, 
+		npk->pIncreaseButton->buttonTextColor
+	);
+	int text_width, text_height;
+	TTF_SizeText(npk->font, npk->caption, &text_width, &text_height);
+	SDL_DrawTextAtXYStretched(
+		pRenderer,
+		npk->caption,
+		npk->font,
+		npk->x + npk->w +npk->pIncreaseButton->buttonPadding*2+4,
+		npk->pIncreaseButton->buttonPadding*2 + npk->y,
+		text_width/2,
+		npk->h-npk->pIncreaseButton->buttonPadding*2,
+		npk->pIncreaseButton->buttonBackgroundColor
+	);
+	free(string);
+}
+
+void SDL_DestroyButton(SDL_CustomButton * pButton)
+{
+	if ( pButton )
+	{
+		free(pButton);
+	}
+}
+
+void SDL_DestroyNumberPicker(SDL_NumberPicker * pNpk)
+{
+	free(pNpk->pIncreaseButton);
+	free(pNpk->pDecreaseButton);
+	free(pNpk);
+}
+
+/* (WRAPPER) Create and return a button*/
+SDL_CustomButton * SDL_CreateStandardButton(int x, int y, int w, int h, const char * pButtonText)
+{
+	SDL_CustomButton * btn = SDL_CreateButtonDetailed(
+		x,y,w,h,
 		BUTTON_POSITION_FIXED,
 		BUTTON_POSITION_FIXED,
 		pButtonText,
@@ -805,7 +1075,7 @@ SDL_CustomButton SDL_CreateStandardButton(int x, int y, int w, int h, const char
 }
 
 /*Create and return a button with a lot of customizable features*/
-SDL_CustomButton SDL_CreateButtonDetailed(
+SDL_CustomButton * SDL_CreateButtonDetailed(
 	int							x, 
 	int							y, 
 	int							w, 
@@ -829,45 +1099,45 @@ SDL_CustomButton SDL_CreateButtonDetailed(
 )
 {
 
-	SDL_CustomButton btn;
+	SDL_CustomButton *btn = ( SDL_CustomButton* ) malloc(sizeof(SDL_CustomButton));
 
 	/*Set colors*/
-	btn.buttonTextColor = pButtonTextColor;
-	btn.buttonBackgroundColor = pButtonBackgroundColor;
-	btn.buttonClickBackgroundColor = pButtonTextColor;
-	btn.buttonClickTextColor = pButtonBackgroundColor;
-	btn.buttonMouseoverBackgroundColor = pButtonTextColor;
-	btn.buttonMouseoverTextColor = pButtonBackgroundColor;
-	btn.buttonToggleBackgroundColor = pButtonTextColor;
-	btn.buttonToggleTextColor = pButtonBackgroundColor;
-	btn.buttonMouseoverTintColor = pButtonMouseoverTintColor;
-	btn.buttonOutlineColor = pButtonOutlineColor;
-	btn.buttonShadowColor.a = ( int ) ( ( double ) pButtonTotalOpacity / 255 * ( double ) 128 / 255 );
+	btn->buttonTextColor = pButtonTextColor;
+	btn->buttonBackgroundColor = pButtonBackgroundColor;
+	btn->buttonClickBackgroundColor = pButtonTextColor;
+	btn->buttonClickTextColor = pButtonBackgroundColor;
+	btn->buttonMouseoverBackgroundColor = pButtonTextColor;
+	btn->buttonMouseoverTextColor = pButtonBackgroundColor;
+	btn->buttonToggleBackgroundColor = pButtonTextColor;
+	btn->buttonToggleTextColor = pButtonBackgroundColor;
+	btn->buttonMouseoverTintColor = pButtonMouseoverTintColor;
+	btn->buttonOutlineColor = pButtonOutlineColor;
+	btn->buttonShadowColor.a = ( int ) ( ( double ) pButtonTotalOpacity / 255 * ( double ) 128 / 255 );
 
 	/*Set font*/
-	btn.buttonFont = pButtonFont;
+	btn->buttonFont = pButtonFont;
 
 	/*Set formatting flags*/
-	btn.buttonMouseoverTintEnabled = pButtonMouseoverTintEnabled;
-	btn.buttonTotalOpacity = pButtonTotalOpacity;
-	btn.shadowEnabled = pButtonShadowEnabled;
-	btn.buttonPadding = getMin(0,pButtonPadding);
-	btn.outlineEnabled = pButtonOutlineEnabled;
-	btn.shadowOffset = pShadowOffset;
+	btn->buttonMouseoverTintEnabled = pButtonMouseoverTintEnabled;
+	btn->buttonTotalOpacity = pButtonTotalOpacity;
+	btn->shadowEnabled = pButtonShadowEnabled;
+	btn->buttonPadding = getMin(0,pButtonPadding);
+	btn->outlineEnabled = pButtonOutlineEnabled;
+	btn->shadowOffset = pShadowOffset;
 
 	/*Set fade values*/
-	btn.buttonFadeState = BUTTON_FADE_STATE_FADING_IN;
-	btn.fadeSpeed = -1;
-	btn.fadeValue = 0;
+	btn->buttonFadeState = BUTTON_FADE_STATE_FADING_IN;
+	btn->fadeSpeed = -1;
+	btn->fadeValue = 0;
 
 	/*Set text*/
 	if ( !strcmp(pButtonText, "") )
 	{
-		sprintf_s(btn.buttonText, 128, "%s", "[...]");
+		sprintf_s(btn->buttonText, 128, "%s", "[...]");
 	}
 	else
 	{
-		sprintf_s(btn.buttonText, 128, "%s", pButtonText);
+		sprintf_s(btn->buttonText, 128, "%s", pButtonText);
 	}
 
 	/*Set width and height*/
@@ -875,39 +1145,39 @@ SDL_CustomButton SDL_CreateButtonDetailed(
 	TTF_SizeText(pButtonFont, pButtonText, &tmpW, &tmpH); //	might use these
 	if ( w < 0 )
 	{
-		btn.w = tmpW + pButtonPadding * 2;
+		btn->w = tmpW + pButtonPadding * 2;
 	}
 	else
 	{
-		btn.w = w;
+		btn->w = w;
 	}
 	if ( h < 0 )
 	{
-		btn.h = tmpH + pButtonPadding * 2;
+		btn->h = tmpH + pButtonPadding * 2;
 	}
 	else
 	{
-		btn.h = h;
+		btn->h = h;
 	}
 
 	/*Set x position*/
 	if ( pButtonXPositionStyle = BUTTON_POSITION_UNDEFINED )
 	{
-		btn.x = SCREEN_WIDTH / 2 - btn.w / 2;
+		btn->x = SCREEN_WIDTH / 2 - btn->w / 2;
 	}
 	else
 	{
-		btn.x = x;
+		btn->x = x;
 	}
 
 	/*Set y position*/
 	if ( pButtonYPositionStyle = BUTTON_POSITION_UNDEFINED )
 	{
-		btn.y = SCREEN_HEIGHT / 2 - btn.h / 2;
+		btn->y = SCREEN_HEIGHT / 2 - btn->h / 2;
 	}
 	else
 	{
-		btn.y = y;
+		btn->y = y;
 	}
 
 	/*Return the button*/
@@ -915,7 +1185,7 @@ SDL_CustomButton SDL_CreateButtonDetailed(
 }
 
 /*Render a button*/
-void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton)
+void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton * pButton)
 {
 	/*Handle mouseover changes*/
 
@@ -924,48 +1194,65 @@ void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton pButton)
 	////////////////
 
 	/*Identify fade factor*/
-	double fadeFactor = ( double ) pButton.fadeValue / 255;
+	double fadeFactor = ( double ) pButton->fadeValue / 255;
 	/*Draw shadow if applicable*/
-	if ( pButton.shadowEnabled )
+	if ( pButton->shadowEnabled )
 	{
-		SDL_Color actualShadowColor = pButton.buttonShadowColor;
+		SDL_Color actualShadowColor = pButton->buttonShadowColor;
 		actualShadowColor.a *= fadeFactor;
-		actualShadowColor.a *= (double)(pButton.buttonTotalOpacity) / 255;
+		actualShadowColor.a *= (double)(pButton->buttonTotalOpacity) / 255;
 		/*Draw the shadow behind the button*/
-		SDL_DrawFillRectHelper(pRenderer, pButton.x + pButton.shadowOffset, pButton.y + pButton.shadowOffset, pButton.w, pButton.h, actualShadowColor);
+		SDL_DrawFillRectHelper(pRenderer, pButton->x + pButton->shadowOffset, pButton->y + pButton->shadowOffset, pButton->w, pButton->h, actualShadowColor);
 	}
 	/*Create new colors for button text and button body depending on fade state and total opacity*/
 	SDL_Color actualButtonColor;
 	SDL_Color actualButtonTextColor;
-	switch ( pButton.buttonState )
+	switch ( pButton->buttonState )
 	{
 	case BS_MOUSEOVER:
-		actualButtonColor = pButton.buttonMouseoverBackgroundColor;
-		actualButtonTextColor = pButton.buttonMouseoverTextColor;
+		actualButtonColor = pButton->buttonMouseoverBackgroundColor;
+		actualButtonTextColor = pButton->buttonMouseoverTextColor;
 		break;
 	case BS_CLICK:
-		actualButtonColor = pButton.buttonClickBackgroundColor;
-		actualButtonTextColor = pButton.buttonClickTextColor;
+		actualButtonColor = pButton->buttonClickBackgroundColor;
+		actualButtonTextColor = pButton->buttonClickTextColor;
 		break;
 	case BS_TOGGLE: 
-		actualButtonColor = pButton.buttonToggleBackgroundColor;
-		actualButtonTextColor = pButton.buttonToggleTextColor;
+		actualButtonColor = pButton->buttonToggleBackgroundColor;
+		actualButtonTextColor = pButton->buttonToggleTextColor;
 		break;
 	case BS_STATIC:
 	default: 
-		actualButtonColor = pButton.buttonBackgroundColor;
-		actualButtonTextColor = pButton.buttonTextColor;
+		actualButtonColor = pButton->buttonBackgroundColor;
+		actualButtonTextColor = pButton->buttonTextColor;
 		break;
 	}
-	Uint8 actualOpacity = ( Uint8 ) ( pButton.buttonTotalOpacity*fadeFactor );
+	Uint8 actualOpacity = ( Uint8 ) ( pButton->buttonTotalOpacity*fadeFactor );
 	actualButtonColor.a = actualOpacity;
 	actualButtonTextColor.a = actualOpacity;
 	/*Draw the actual button body*/
-	SDL_DrawFillRectHelper(pRenderer, pButton.x, pButton.y, pButton.w, pButton.h, actualButtonColor);
-	SDL_DrawTextAtXY(pRenderer, pButton.buttonText, pButton.buttonFont,pButton.x+pButton.buttonPadding,pButton.y+pButton.buttonPadding, actualButtonTextColor);
+	SDL_DrawFillRectHelper(pRenderer, pButton->x, pButton->y, pButton->w, pButton->h, actualButtonColor);
+	SDL_DrawTextAtXYStretched(
+		pRenderer,
+		pButton->buttonText,
+		pButton->buttonFont,
+		pButton->x + pButton->buttonPadding,
+		pButton->y + pButton->buttonPadding,
+		pButton->w - pButton->buttonPadding * 2,
+		pButton->h - pButton->buttonPadding * 2,
+		actualButtonTextColor
+	);
 	return;
 }
 
+/*Handle mouseover events for number pickers*/
+void SDL_NumberPickerHandleMouseover(SDL_NumberPicker * npk, int mouse_x, int mouse_y)
+{
+	SDL_ButtonHandleMouseover(npk->pIncreaseButton, mouse_x, mouse_y);
+	SDL_ButtonHandleMouseover(npk->pDecreaseButton, mouse_x, mouse_y);
+}
+
+/*Handle mouseover events for buttons*/
 void SDL_ButtonHandleMouseover(SDL_CustomButton * pButton, int mouse_x, int mouse_y)
 {
 	if ( SDL_MouseInButtonBounds(mouse_x, mouse_y, pButton) && pButton->buttonState != BS_CLICK)
@@ -976,6 +1263,12 @@ void SDL_ButtonHandleMouseover(SDL_CustomButton * pButton, int mouse_x, int mous
 	{
 		pButton->buttonState = BS_STATIC;
 	}
+}
+
+void SDL_UpdateNumberPicker(SDL_NumberPicker * npk)
+{
+	SDL_UpdateButton(npk->pIncreaseButton);
+	SDL_UpdateButton(npk->pDecreaseButton);
 }
 
 void SDL_UpdateButton(SDL_CustomButton * pButton)
@@ -1026,6 +1319,20 @@ int SDL_ButtonClicked( SDL_CustomButton * pButton, SDL_Event * e)
 		}
 	}
 	return 0;
+}
+
+void SDL_NumberPickerHandleClick(SDL_NumberPicker * npk, SDL_Event *e)
+{
+	if ( SDL_ButtonClicked(npk->pIncreaseButton, e) )
+	{
+		npk->currentValue += npk->incrementSize;
+	}
+	if ( SDL_ButtonClicked(npk->pDecreaseButton, e) )
+	{
+		npk->currentValue -= npk->incrementSize;
+	}
+	if ( npk->currentValue > npk->maxValue ) npk->currentValue = npk->maxValue;
+	if ( npk->currentValue < npk->minValue ) npk->currentValue = npk->minValue;
 }
 
 /*Returns 1 if mouse is over button specified*/
