@@ -431,16 +431,17 @@ int main(int argc, char * argv[ ])
 			SDL_CustomButton * mainMenuButton = SDL_CreateStandardButton(10, SCREEN_HEIGHT - 25, -1, -1, "<< MAIN MENU");
 			mainMenuButton->fadeSpeed = 50;
 
-			SDL_CustomButton * quitProgramButton = SDL_CreateStandardButton(SCREEN_WIDTH-104, SCREEN_HEIGHT - 25, 96, 32, "Exit Program");
+			SDL_CustomButton * quitProgramButton = SDL_CreateStandardButton(SCREEN_WIDTH - 128, SCREEN_HEIGHT - 25, -1, -1, "Exit Program");
+			SDL_CustomButton * startButton = SDL_CreateStandardButton(10, SCREEN_HEIGHT-25, -1, -1, "Start Session");
 
 			SDL_NumberPicker * npUnderpopulationThreshold = SDL_CreateNumberPicker(10, 150, 60, 20, 0, 9, font, "Underpopulation Threshold");
-			npUnderpopulationThreshold->currentValue = UNDERPOP_NUMBER;
+			npUnderpopulationThreshold->currentValue = 1;
 			SDL_NumberPicker * npOverpopulationThreshold = SDL_CreateNumberPicker(10, 150+25*1, 60, 20, 0, 9, font, "Overpopulation Threshold");
-			npOverpopulationThreshold->currentValue = OVERPOP_NUMBER;
+			npOverpopulationThreshold->currentValue = 1;
 			SDL_NumberPicker * npRebirthThreshold = SDL_CreateNumberPicker(10, 150 + 25 * 2, 60, 20, 0, 9, font, "Birth Threshold");
-			npRebirthThreshold->currentValue = REBIRTH_NUMBER;
-			SDL_NumberPicker * npNeighborhoodSize = SDL_CreateNumberPicker(10, 150 + 25 * 3, 60, 20, 0, 9, font, "Neighborhood Size");
-			npNeighborhoodSize->currentValue = FRIEND_RANGE;
+			npRebirthThreshold->currentValue = 1;
+			SDL_NumberPicker * npNeighborhoodSize = SDL_CreateNumberPicker(10, 150 + 25 * 3, 60, 20, 1, 5, font, "Neighborhood Size");
+			npNeighborhoodSize->currentValue = 1;
 
 			const int TITLEHEIGHT = 64;
 			const int MARGIN = 10;
@@ -461,16 +462,6 @@ int main(int argc, char * argv[ ])
 					{
 						/*Track the mouse position.*/
 						SDL_GetMouseState(&mouse_x, &mouse_y);
-						if ( event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE )
-						{
-							/*Take the values from the number pickers and update our global variables.*/
-							UNDERPOP_NUMBER = npUnderpopulationThreshold->currentValue;
-							OVERPOP_NUMBER = npOverpopulationThreshold->currentValue;
-							FRIEND_RANGE = npNeighborhoodSize->currentValue;
-							REBIRTH_NUMBER = npRebirthThreshold->currentValue;
-							onMainMenu = false;
-							sessionRunning = true;
-						}
 						/*Handle mouseover event*/
 						if ( event.type == SDL_MOUSEMOTION )
 						{
@@ -479,6 +470,7 @@ int main(int argc, char * argv[ ])
 							SDL_NumberPickerHandleMouseover(npRebirthThreshold, mouse_x, mouse_y);
 							SDL_NumberPickerHandleMouseover(npNeighborhoodSize, mouse_x, mouse_y);
 							SDL_ButtonHandleMouseover(quitProgramButton, mouse_x, mouse_y);
+							SDL_ButtonHandleMouseover(startButton, mouse_x, mouse_y);
 						}
 						/*Handle click events*/
 						if ( event.type == SDL_MOUSEBUTTONDOWN )
@@ -492,6 +484,17 @@ int main(int argc, char * argv[ ])
 								gameRunning = false;
 								break;
 							}
+							if ( SDL_ButtonClicked(startButton, &event) )
+							{
+								/*Take the values from the number pickers and update our global variables.*/
+								UNDERPOP_NUMBER = npUnderpopulationThreshold->currentValue;
+								OVERPOP_NUMBER = npOverpopulationThreshold->currentValue;
+								FRIEND_RANGE = npNeighborhoodSize->currentValue;
+								REBIRTH_NUMBER = npRebirthThreshold->currentValue;
+								onMainMenu = false;
+								sessionRunning = true;
+								break;
+							}
 						}
 					}
 
@@ -500,17 +503,19 @@ int main(int argc, char * argv[ ])
 					SDL_UpdateNumberPicker(npRebirthThreshold);
 					SDL_UpdateNumberPicker(npNeighborhoodSize);
 					SDL_UpdateButton(quitProgramButton);
+					SDL_UpdateButton(startButton);
 
 					/* Clear screen.*/
 					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 					SDL_RenderClear(renderer);
 
 					/*Draw everything*/
-					SDL_DrawTextAtXYStretchedColorShadow(renderer, "Conway's", title_font, MARGIN, MARGIN, 128, MARGIN * 2 - 4, cWhite, cGray, 1);
+					SDL_DrawTextAtXYStretchedColorShadow(renderer, "Conway's", title_font, MARGIN, MARGIN, 100, MARGIN * 2 - 12, cWhite, cGray, 1);
 					SDL_DrawTextAtXYStretchedColorShadow(renderer, "GAME OF LIFE", title_font, MARGIN, MARGIN * 2 + ELEMENTSPACE, SCREEN_WIDTH - MARGIN * 2, TITLEHEIGHT, cWhite, cGray, 4);
 					SDL_DrawTextAtXYStretchedColorShadow(renderer, "IN FULL TEKNIKOLOR", title_font, MARGIN, MARGIN * 2 + ELEMENTSPACE + TITLEHEIGHT, SCREEN_WIDTH - MARGIN * 2, SUBTITLEHEIGHT, cWhite, cGray, 2);
 
 					SDL_RenderButton(renderer, quitProgramButton);
+					SDL_RenderButton(renderer, startButton);
 					SDL_RenderNumberPicker(renderer, npUnderpopulationThreshold);
 					SDL_RenderNumberPicker(renderer, npOverpopulationThreshold);
 					SDL_RenderNumberPicker(renderer, npRebirthThreshold);
