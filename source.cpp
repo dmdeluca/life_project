@@ -265,6 +265,7 @@ void SDL_RenderNumberPicker(SDL_Renderer * pRenderer, SDL_NumberPicker * npk);
 void SDL_UpdateNumberPicker(SDL_NumberPicker * npk);
 void SDL_NumberPickerHandleMouseover(SDL_NumberPicker * npk, int mouse_x, int mouse_y);
 void SDL_NumberPickerHandleClick(SDL_NumberPicker * npk, SDL_Event *e);
+void SDL_DrawBoxGrid(SDL_Renderer * pRenderer, int x, int y, int wh, int n, int space, SDL_Color pBoxColor, SDL_Color pTextColor, TTF_Font *font);
 
 /*Global variables*/
 SDL_Event				event;
@@ -510,9 +511,13 @@ int main(int argc, char * argv[ ])
 					SDL_RenderClear(renderer);
 
 					/*Draw everything*/
-					SDL_DrawTextAtXYStretchedColorShadow(renderer, "Conway's", title_font, MARGIN, MARGIN, 100, MARGIN * 2 - 12, cWhite, cGray, 1);
+					SDL_DrawTextAtXYStretchedColorShadow(renderer, "Conway's", title_font, MARGIN, MARGIN, 100, MARGIN * 2 - 8, cWhite, cGray, 1);
 					SDL_DrawTextAtXYStretchedColorShadow(renderer, "GAME OF LIFE", title_font, MARGIN, MARGIN * 2 + ELEMENTSPACE, SCREEN_WIDTH - MARGIN * 2, TITLEHEIGHT, cWhite, cGray, 4);
 					SDL_DrawTextAtXYStretchedColorShadow(renderer, "IN FULL TEKNIKOLOR", title_font, MARGIN, MARGIN * 2 + ELEMENTSPACE + TITLEHEIGHT, SCREEN_WIDTH - MARGIN * 2, SUBTITLEHEIGHT, cWhite, cGray, 2);
+
+					SDL_DrawTextAtXYStretchedColorShadow(renderer, "Rules:", font, MARGIN, MARGIN+TITLEHEIGHT+SUBTITLEHEIGHT+ELEMENTSPACE*4, 60, 16, cWhite,cGray,2);
+
+					SDL_DrawBoxGrid(renderer, MARGIN, 250, 60, 2*npNeighborhoodSize->currentValue + 1, 3, cGray, cWhite, font);
 
 					SDL_RenderButton(renderer, quitProgramButton);
 					SDL_RenderButton(renderer, startButton);
@@ -613,6 +618,40 @@ void Life_UpdateSoil(Dot * pLifeDotArray, Dot * pSoilDotArray)
 		else if (pSoilDotArray[i ].value < SOIL_VALUE_LIMIT )
 		{
 			pSoilDotArray[ i ].value += 1;
+		}
+	}
+}
+
+/*Draw a box grid to illustration neighborhood definition*/
+void SDL_DrawBoxGrid(SDL_Renderer * pRenderer, int x, int y, int wh, int n, int space, SDL_Color pBoxColor, SDL_Color pTextColor, TTF_Font *font)
+{
+	SDL_Color pBGColor = pBoxColor;
+	SDL_ColorAdjHSV(&pBGColor, 0, 0, -.2);
+	SDL_DrawFillRectHelper(pRenderer, x+2, y+2, wh, wh, pBGColor);
+	for ( int i = 0; i < n; i++ )
+	{
+		for ( int j = 0; j < n; j++ )
+		{
+			SDL_DrawFillRectHelper(
+				pRenderer,
+				x + j * (( double ) wh) / n + ( double ) space / 2,
+				y + i * (( double ) wh) / n + ( double ) space / 2,
+				(( double ) wh) / n - ( double ) space / 2,
+				(( double ) wh) / n - ( double ) space / 2,
+				pBoxColor
+			);
+			if ((i != n/2 ) || (j != n/2))
+			SDL_DrawTextAtXYStretched(
+				pRenderer,
+				"N",
+				font,
+				( int ) ( x + j * (( double ) wh) / n + ( double ) space ),
+				( int ) ( y + i * (( double ) wh) / n + ( double ) space ),
+				( int ) ( (( double ) wh) / n - ( double ) space*2 ),
+				( int ) ( (( double ) wh) / n - ( double ) space*2 ),
+				pTextColor
+			);
+
 		}
 	}
 }
