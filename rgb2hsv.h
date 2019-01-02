@@ -1,5 +1,4 @@
-#ifndef _RGBHSV_H_
-#define _RGBHSV_H_
+#pragma once
 /*RGB AND HSV STRUCTURES*/
 typedef struct
 {
@@ -15,7 +14,5 @@ typedef struct
 	double v;       // a fraction between 0 and 1
 } hsv;
 
-extern  hsv  rgb2hsv(rgb);
-extern rgb	hsv2rgb(hsv);
-
-#endif // !_RGBHSV_H_
+extern hsv  rgb2hsv(rgb);
+extern rgb  hsv2rgb(hsv);

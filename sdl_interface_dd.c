@@ -1,32 +1,21 @@
-#include "sdlguidd.h"
-
-SDL_Color GUI_cWhite = { 255,255,255,255 };
-SDL_Color GUI_cBlack = { 0,0,0,255 };
-SDL_Color GUI_cGray = { 128,128,128,255 };
-SDL_Color GUI_cDkGray = { 64,64,64,255 };
-
-static int				SCREEN_WIDTH = 400;
-static int				SCREEN_HEIGHT = 400;
+#include "sdl_interface_dd.h"
 
 /*Button default values*/
-TTF_Font	*DEFAULT_BUTTON_FONT;
-const int	DEFAULT_BUTTON_PADDING = 2;
-SDL_Color	DEFAULT_BUTTON_TEXT_COLOR = { 0,0,0,255 };
-SDL_Color	DEFAULT_BUTTON_BG_COLOR = { 255,255,255,255 };
-SDL_Color	DEFAULT_BUTTON_MO_TINT_COLOR = { 255,0,0,255 };
-SDL_Color	DEFAULT_BUTTON_MO_OUTLINE_COLOR = { 128,128,128,255 };
-SDL_Color	DEFAULT_BUTTON_SHADOW_COLOR = { 64,64,64,255 };
-enum ButtonTextAlignment DEFAULT_BUTTON_TEXT_ALIGNMENT = BTA_CENT;
+ TTF_Font		*DEFAULT_BUTTON_FONT = NULL;
+ const int	DEFAULT_BUTTON_PADDING = 2;
+ SDL_Color	DEFAULT_BUTTON_TEXT_COLOR = { 0,0,0,255 };
+ SDL_Color	DEFAULT_BUTTON_BG_COLOR = { 255,255,255,255 };
+ SDL_Color	DEFAULT_BUTTON_MO_TINT_COLOR = { 255,0,0,255 };
+ SDL_Color	DEFAULT_BUTTON_MO_OUTLINE_COLOR = { 128,128,128,255 };
+ SDL_Color	DEFAULT_BUTTON_SHADOW_COLOR = { 64,64,64,255 };
+ enum ButtonTextAlignment DEFAULT_BUTTON_TEXT_ALIGNMENT = BTA_CENT;
 
 SDL_CheckBox * SDL_CreateCheckBox(int x, int y, int w, int h, enum CheckBoxState startValue, TTF_Font * font, const char * caption)
 {
 	SDL_CheckBox *chb = ( SDL_CheckBox* ) malloc(sizeof(SDL_CheckBox));
 	chb->bgColor = DEFAULT_BUTTON_BG_COLOR;
 	chb->ckColor = DEFAULT_BUTTON_TEXT_COLOR;
-	chb->fgColor.r = 255;
-	chb->fgColor.g = 255;
-	chb->fgColor.b = 255;
-	chb->fgColor.a = 255;
+	chb->fgColor = cWhite;
 	chb->h = h;
 	chb->w = w;
 	chb->padding = DEFAULT_BUTTON_PADDING;
@@ -35,18 +24,13 @@ SDL_CheckBox * SDL_CreateCheckBox(int x, int y, int w, int h, enum CheckBoxState
 	chb->font = DEFAULT_BUTTON_FONT;
 	chb->shadowEnabled = 1;
 	chb->shColor = DEFAULT_BUTTON_SHADOW_COLOR;
-	sprintf_s(chb->caption, MAX_BUTTON_STRING_LENGTH, "%s", caption);
+	sprintf_s(chb->caption, 128, "%s", caption);
 	return chb;
 }
 
 void SDL_DestroyCheckBox(SDL_CheckBox * chb)
 {
 	free(chb);
-}
-
-void		SDL_ButtonsSetDefaultFont(TTF_Font *font)
-{
-	DEFAULT_BUTTON_FONT = font;
 }
 
 void SDL_RenderCheckBox(SDL_Renderer * pRenderer, SDL_CheckBox * chb)
@@ -300,23 +284,23 @@ void SDL_InterfaceAutoArrangeItems(SDL_Interface *interface)
 		{
 			ctn->button->x = interface->x + interface->interfaceMargin;
 			//	[Do not change width for now.]
-			ctn->button->y = interface->y + ( double ) interface->interfaceTotalHeight * ( double ) itemsArranged / itemsToArrange + interface->interfaceMargin;
-			ctn->button->h = ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2;
+			ctn->button->y = ( int ) ( interface->y + ( double ) interface->interfaceTotalHeight * ( double ) itemsArranged / itemsToArrange + interface->interfaceMargin );
+			ctn->button->h = ( int ) ( ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2 );
 		}
 		else if ( ctn->npk )
 		{
 			ctn->npk->x = interface->x + interface->interfaceMargin;
 			//	[Do not change width for now.]
-			ctn->npk->y = interface->y + ( double ) interface->interfaceTotalHeight * ( double ) itemsArranged / itemsToArrange + interface->interfaceMargin;
-			ctn->npk->h = ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2;
+			ctn->npk->y = ( int ) ( interface->y + ( double ) interface->interfaceTotalHeight * ( double ) itemsArranged / itemsToArrange + interface->interfaceMargin );
+			ctn->npk->h = ( int ) ( ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2 );
 			SDL_NumberPickerAutoAdjustButtons(ctn->npk);
 		}
 		else if ( ctn->chkbx )
 		{
 			ctn->chkbx->x = interface->x + interface->interfaceMargin;
 			//	[Do not change width for now.]
-			ctn->chkbx->y = interface->y + ( double ) interface->interfaceTotalHeight * ( double ) itemsArranged / itemsToArrange + interface->interfaceMargin;
-			ctn->chkbx->h = ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2;
+			ctn->chkbx->y = ( int ) ( interface->y + ( double ) interface->interfaceTotalHeight * ( double ) itemsArranged / itemsToArrange + interface->interfaceMargin );
+			ctn->chkbx->h = ( int ) ( ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2 );
 			ctn->chkbx->w = ctn->chkbx->h;
 		}
 		itemsArranged++;
@@ -345,7 +329,7 @@ void SDL_NumberPickerAutoAdjustButtons(SDL_NumberPicker *npk)
 {
 	if ( npk )
 	{
-		npk->pDecreaseButton->w = ( double ) npk->w / 3 - npk->padding * 2;
+		npk->pDecreaseButton->w = ( int ) round(( double ) npk->w / 3 - npk->padding * 2);
 		npk->pDecreaseButton->h = npk->h - npk->padding * 2;
 		npk->pDecreaseButton->y = npk->y + npk->padding;
 		npk->pDecreaseButton->x = npk->x + npk->padding;
@@ -375,6 +359,9 @@ SDL_Interface * SDL_CreateInterface(int w, int h)
 	newIntf->interfaceItemPadding = DEFAULT_BUTTON_PADDING;
 	newIntf->interfaceLayoutType = IL_LIST;
 	newIntf->interfaceMargin = DEFAULT_BUTTON_PADDING;
+	newIntf->interfaceTotalWidth = w;
+	newIntf->interfaceTotalHeight = h;
+	/*
 	if ( w == -1 )
 	{
 		newIntf->interfaceTotalWidth = SCREEN_WIDTH / 2;
@@ -391,6 +378,7 @@ SDL_Interface * SDL_CreateInterface(int w, int h)
 	{
 		newIntf->interfaceTotalHeight = h;
 	}
+	*/
 	newIntf->mItemType = IIT_NONE;
 	newIntf->pHead = NULL;
 	return newIntf;
@@ -457,10 +445,10 @@ void SDL_DrawBoxGrid(SDL_Renderer * pRenderer, int x, int y, int wh, int n, int 
 		{
 			SDL_DrawFillRectHelper(
 				pRenderer,
-				x + j * ( ( double ) wh ) / n + ( double ) space / 2,
-				y + i * ( ( double ) wh ) / n + ( double ) space / 2,
-				( ( double ) wh ) / n - ( double ) space / 2,
-				( ( double ) wh ) / n - ( double ) space / 2,
+				( int ) ( x + j * ( ( double ) wh ) / n + ( double ) space / 2 ),
+				( int ) ( y + i * ( ( double ) wh ) / n + ( double ) space / 2 ),
+				( int ) ( ( ( double ) wh ) / n - ( double ) space / 2 ),
+				( int ) ( ( ( double ) wh ) / n - ( double ) space / 2 ),
 				pBoxColor
 			);
 			if ( ( i != n / 2 ) || ( j != n / 2 ) )
@@ -479,58 +467,6 @@ void SDL_DrawBoxGrid(SDL_Renderer * pRenderer, int x, int y, int wh, int n, int 
 	}
 }
 
-/* WRAPPER Draw text on the screen*/
-void SDL_DrawTextAtXY(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, SDL_Color color)
-{
-	int w, h;
-	TTF_SizeText(font, string, &w, &h);
-	SDL_DrawTextAtXYStretched(renderer, string, font, x, y, w, h, color);
-}
-
-/* Draw text on the screen stretched to a certain width w and height h in pixels.*/
-void SDL_DrawTextAtXYStretched(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color)
-{
-
-	SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, string, color);
-	SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage); //now you can convert it into a texture
-	SDL_Rect Message_rect; //create a rect
-	Message_rect.x = x;  //controls the rect's x coordinate 
-	Message_rect.y = y; // controls the rect's y coordinte
-						//TTF_SizeText(font, string, &Message_rect.w, &Message_rect.h);
-	Message_rect.w = w;
-	Message_rect.h = h;
-
-	SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
-
-	SDL_DestroyTexture(Message);
-	SDL_FreeSurface(surfaceMessage);
-}
-
-void SDL_DrawTextAtXYStretchedColorShadow(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color, SDL_Color shadowColor, int offset)
-{
-	/*Draw shadow*/
-	SDL_DrawTextAtXYStretched(renderer, string, font, x + offset, y + offset, w, h, shadowColor);
-	/*Draw foreground*/
-	SDL_DrawTextAtXYStretched(renderer, string, font, x, y, w, h, color);
-}
-
-/*Draw text on the screen with an optional shadow.*/
-void	SDL_DrawTextShadow(
-	SDL_Renderer * renderer,
-	const char * string,
-	TTF_Font * font,
-	int x, int y,
-	SDL_Color color,
-	int doShadow)
-{
-	if ( doShadow )
-	{
-		SDL_Color ShadowColor = { 0,0,0,128 };
-		SDL_DrawTextAtXY(renderer, string, font, x + 2, y + 2, ShadowColor);
-	}
-	SDL_DrawTextAtXY(renderer, string, font, x, y, color);
-}
-
 SDL_NumberPicker * SDL_CreateNumberPicker(int x, int y, int w, int h, int minValue, int maxValue, TTF_Font * font, const char * caption)
 {
 	SDL_NumberPicker * npk = ( SDL_NumberPicker* ) malloc(sizeof(SDL_NumberPicker));
@@ -544,7 +480,7 @@ SDL_NumberPicker * SDL_CreateNumberPicker(int x, int y, int w, int h, int minVal
 	npk->maxValue = maxValue;
 	npk->currentValue = minValue;
 	npk->incrementSize = 1;
-	sprintf_s(npk->caption, MAX_BUTTON_STRING_LENGTH, "%s", caption);
+	sprintf_s(npk->caption, 128, "%s", caption);
 	npk->hasShadow = 1;
 	int padding = 2;
 	npk->pDecreaseButton = SDL_CreateStandardButton(npk->x + padding, npk->y + padding, ( int ) ( ( double ) npk->w / 3 ) - padding * 2, npk->h - padding * 2, "-");
@@ -564,8 +500,7 @@ void SDL_RenderNumberPicker(SDL_Renderer * pRenderer, SDL_NumberPicker * npk)
 		SDL_DrawFillRectHelper(pRenderer, npk->x + 2, npk->y + 2, npk->w, npk->h, shadowColor);
 	}
 	/*Render number picker background*/
-	SDL_Color dkGray = { 100,100,100,255 };
-	SDL_DrawFillRectHelper(pRenderer, npk->x, npk->y, npk->w, npk->h, dkGray);
+	SDL_DrawFillRectHelper(pRenderer, npk->x, npk->y, npk->w, npk->h, cGray);
 	SDL_RenderButton(pRenderer, npk->pIncreaseButton);
 	SDL_RenderButton(pRenderer, npk->pDecreaseButton);
 	char * string = ( char* ) malloc(4 * sizeof(char));
@@ -731,7 +666,8 @@ SDL_CustomButton * SDL_CreateButtonDetailed(
 	}
 
 	/*Set x position*/
-	if ( pButtonXPositionStyle = BUTTON_POSITION_UNDEFINED )
+	/*
+		if ( pButtonXPositionStyle = BUTTON_POSITION_UNDEFINED )
 	{
 		btn->x = SCREEN_WIDTH / 2 - btn->w / 2;
 	}
@@ -740,7 +676,7 @@ SDL_CustomButton * SDL_CreateButtonDetailed(
 		btn->x = x;
 	}
 
-	/*Set y position*/
+	// Set y position
 	if ( pButtonYPositionStyle = BUTTON_POSITION_UNDEFINED )
 	{
 		btn->y = SCREEN_HEIGHT / 2 - btn->h / 2;
@@ -749,6 +685,13 @@ SDL_CustomButton * SDL_CreateButtonDetailed(
 	{
 		btn->y = y;
 	}
+	
+	*/
+
+
+	btn->x = x;
+	btn->y = y;
+
 
 	/*Return the button*/
 	return btn;
@@ -769,8 +712,8 @@ void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton * pButton)
 	if ( pButton->shadowEnabled )
 	{
 		SDL_Color actualShadowColor = pButton->buttonShadowColor;
-		actualShadowColor.a *= fadeFactor;
-		actualShadowColor.a *= ( double ) ( pButton->buttonTotalOpacity ) / 255;
+		actualShadowColor.a = ( Uint8 ) ( int ) ( actualShadowColor.a*fadeFactor );
+		actualShadowColor.a = ( Uint8 ) ( actualShadowColor.a*( double ) ( pButton->buttonTotalOpacity ) / 255 );
 		/*Draw the shadow behind the button*/
 		SDL_DrawFillRectHelper(pRenderer, pButton->x + pButton->shadowOffset, pButton->y + pButton->shadowOffset, pButton->w, pButton->h, actualShadowColor);
 	}
@@ -808,10 +751,10 @@ void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton * pButton)
 			pRenderer,
 			pButton->buttonText,
 			pButton->buttonFont,
-			pButton->x + pButton->buttonPadding + ( double ) pButton->cornerRadius / 2,
-			pButton->y + pButton->buttonPadding + ( double ) pButton->cornerRadius / 2,
-			pButton->w - pButton->buttonPadding * 2 - ( double ) pButton->cornerRadius / 2,
-			pButton->h - pButton->buttonPadding * 2 - ( double ) pButton->cornerRadius / 2,
+			( int ) ( pButton->x + pButton->buttonPadding + ( double ) pButton->cornerRadius / 2 ),
+			( int ) ( pButton->y + pButton->buttonPadding + ( double ) pButton->cornerRadius / 2 ),
+			( int ) ( pButton->w - pButton->buttonPadding * 2 - ( double ) pButton->cornerRadius / 2 ),
+			( int ) ( pButton->h - pButton->buttonPadding * 2 - ( double ) pButton->cornerRadius / 2 ),
 			actualButtonTextColor
 		);
 
@@ -859,8 +802,6 @@ void SDL_UpdateNumberPicker(SDL_NumberPicker * npk)
 {
 	SDL_UpdateButton(npk->pIncreaseButton);
 	SDL_UpdateButton(npk->pDecreaseButton);
-	if ( npk->currentValue > npk->maxValue ) npk->currentValue = npk->maxValue;
-	if ( npk->currentValue < npk->minValue ) npk->currentValue = npk->minValue;
 }
 
 void SDL_UpdateButton(SDL_CustomButton * pButton)
@@ -979,67 +920,4 @@ int SDL_MouseInBox(int mouse_x, int mouse_y, int x1, int y1, int x2, int y2)
 		return 1;
 	}
 	return 0;
-}
-
-
-
-/*Helper function for drawing rectangles.*/
-void SDL_DrawFillRectHelper(SDL_Renderer *pRenderer, int x, int  y, int w, int h, SDL_Color pColor)
-{
-	SDL_Rect rect;
-	rect.w = w;
-	rect.h = h;
-	rect.x = x;
-	rect.y = y;
-	SDL_SetRenderDrawColor(
-		pRenderer,
-		pColor.r,
-		pColor.g,
-		pColor.b,
-		pColor.a
-	);
-	SDL_RenderFillRect(pRenderer, &rect);
-}
-
-/*Helper function for drawing rectangles.*/
-void SDL_DrawFillRectHelperColorless(SDL_Renderer *pRenderer, int x, int  y, int w, int h)
-{
-	SDL_Rect rect;
-	rect.w = w;
-	rect.h = h;
-	rect.x = x;
-	rect.y = y;
-	SDL_RenderFillRect(pRenderer, &rect);
-}
-
-void SDL_DrawFillCircleHelper(SDL_Renderer *pRenderer, int x, int y, int r)
-{
-	int r_squared = r * r;
-	for ( int i = -r - 1; i < r + 1; i++ )
-	{
-		for ( int j = -r - 1; j < r + 1; j++ )
-		{
-			if ( i * i + j * j < r_squared )
-			{
-				SDL_RenderDrawPoint(pRenderer, x + i, y + j);
-			}
-		}
-	}
-}
-
-void SDL_DrawFillRectRoundedHelper(SDL_Renderer *pRenderer, int x, int y, int w, int h, SDL_Color pColor, int radius)
-{
-	SDL_SetRenderDrawColor(
-		pRenderer,
-		pColor.r,
-		pColor.g,
-		pColor.b,
-		pColor.a
-	);
-	SDL_DrawFillRectHelperColorless(pRenderer, x + radius, y, w - ( radius * 2 ), h);
-	SDL_DrawFillRectHelperColorless(pRenderer, x, y + radius, w, h - ( radius * 2 ));
-	SDL_DrawFillCircleHelper(pRenderer, x + radius, y + radius, radius);
-	SDL_DrawFillCircleHelper(pRenderer, x + radius, y + h - radius, radius);
-	SDL_DrawFillCircleHelper(pRenderer, x + w - radius, y + radius, radius);
-	SDL_DrawFillCircleHelper(pRenderer, x + w - radius, y + h - radius, radius);
 }

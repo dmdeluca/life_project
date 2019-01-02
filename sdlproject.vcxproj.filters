@@ -15,15 +15,51 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="rgbhsv.c">
+    <ClCompile Include="rgb2hsv.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="va_minmax.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities_dd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sdl_color_ops_dd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sdl_interface_dd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sdl_helpers_dd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="handycolors.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rgbhsv.h">
+    <ClInclude Include="rgb2hsv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="handycolors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="va_minmax.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sdl_interface_dd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities_dd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sdl_color_ops_dd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sdl_helpers_dd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

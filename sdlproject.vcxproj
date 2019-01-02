@@ -124,11 +124,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="rgbhsv.c" />
+    <ClCompile Include="handycolors.c" />
+    <ClCompile Include="rgb2hsv.c" />
+    <ClCompile Include="main.c" />
+    <ClCompile Include="sdl_color_ops_dd.c" />
+    <ClCompile Include="sdl_helpers_dd.c" />
+    <ClCompile Include="sdl_interface_dd.c" />
+    <ClCompile Include="utilities_dd.c" />
+    <ClCompile Include="va_minmax.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rgbhsv.h" />
+    <ClInclude Include="handycolors.h" />
+    <ClInclude Include="rgb2hsv.h" />
+    <ClInclude Include="sdl_color_ops_dd.h" />
+    <ClInclude Include="sdl_helpers_dd.h" />
+    <ClInclude Include="sdl_interface_dd.h" />
+    <ClInclude Include="utilities_dd.h" />
+    <ClInclude Include="va_minmax.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
