@@ -16,9 +16,7 @@ using namespace std;
 #define NROWS 100
 #define NCOLS 100
 #define MAX_VALUE 1
-#define DELAY_VALUE (int)((double)1000/30)
 #define STRONG_THRESHOLD 8
-#define GLOW_ENABLE 1
 #define GRADUALLY_INCREASE_COLOR 0
 #define CHANCE_OF_MIRACLE 1000000000000000
 #define HAND_OF_GOD_SIZE 2
@@ -92,6 +90,12 @@ enum ButtonGeneralState
 	BS_TOGGLE
 };
 
+enum CheckBoxState
+{
+	CB_CHECKED,
+	CB_UNCHECKED
+};
+
 /* Button custom data structure */
 typedef struct
 {
@@ -126,7 +130,26 @@ typedef struct
 	SDL_Color	buttonClickTextColor;
 	SDL_Color	buttonToggleBackgroundColor;
 	SDL_Color	buttonToggleTextColor;
+	bool		cornersRounded;
+	int			cornerRadius;
 } SDL_CustomButton;
+
+typedef struct
+{
+	int			x;
+	int			y;
+	int			w;
+	int			h;
+	enum CheckBoxState state;
+	SDL_Color	bgColor;
+	SDL_Color	fgColor;
+	SDL_Color	ckColor;
+	bool		shadowEnabled;
+	SDL_Color	shColor;
+	TTF_Font	*font;
+	char 		caption[MAX_BUTTON_STRING_LENGTH];
+	int			padding;
+} SDL_CheckBox;
 
 typedef struct
 {
@@ -164,6 +187,7 @@ typedef struct interface_item_container
 	enum SDL_InterfaceItemType type;
 	SDL_CustomButton * button;
 	SDL_NumberPicker * npk;
+	SDL_CheckBox * chkbx;
 	struct interface_item_container * pNext;
 } SDL_InterfaceItemContainer;
 
@@ -171,7 +195,8 @@ enum SDL_InterfaceItemType
 {
 	IIT_NONE,
 	IIT_NPK,
-	IIT_BTN
+	IIT_BTN,
+	IIT_CHB
 };
 
 enum SDL_InterfaceLayoutType
@@ -199,6 +224,7 @@ typedef struct
 	int interfaceItemCount;
 	int interfaceColumnNumber;
 	enum SDL_InterfaceLayoutType interfaceLayoutType;
+	int t;
 } SDL_Interface;
 
 /*Life declarations*/
@@ -228,6 +254,8 @@ void		SDL_DrawTextAtXY(SDL_Renderer * renderer, const char * string, TTF_Font * 
 void		SDL_DrawTextAtXYStretched(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color);
 void		SDL_DrawTextShadow(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, SDL_Color color, int doShadow);
 void		SDL_DrawFillRectHelper(SDL_Renderer *renderer, int x, int  y, int h, int w, SDL_Color color);
+void		SDL_DrawFillRectHelperColorless(SDL_Renderer *pRenderer, int x, int  y, int w, int h);
+void		SDL_DrawFillRectRoundedHelper(SDL_Renderer *pRenderer, int x, int y, int w, int h, SDL_Color pColor, int radius);
 
 /*Color declarations*/
 void		SDL_ColorAdjSat(SDL_Color * pColor, double mAmount);
@@ -246,6 +274,8 @@ static rgb	hsv2rgb(hsv);
 FriendMap	*Life_CreateFriendMap(Dot * dots, int i, int row_length, int array_size);
 void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, int pArraySize);
 void		Life_FreeFriendMap(FriendMap* fmap);
+
+
 
 /*Button function declarations*/
 SDL_CustomButton * SDL_CreateStandardButton(int x, int y, int w, int h, const char * pButtonText);
@@ -274,9 +304,14 @@ SDL_CustomButton * SDL_CreateButtonDetailed(
 void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton * pButton);
 void SDL_UpdateButton(SDL_CustomButton * pButton);
 int SDL_ButtonClicked(SDL_CustomButton * pButton, SDL_Event * e);
-int SDL_MouseInButtonBounds(int x, int y, SDL_CustomButton * pButton);
 void SDL_ButtonHandleMouseover(SDL_CustomButton * btn, int mouse_x, int mouse_y);
 void SDL_DestroyButton(SDL_CustomButton * pButton);
+
+/*Mouse helper functions declarations*/
+int SDL_MouseInButtonBounds(int x, int y, SDL_CustomButton * pButton);
+int SDL_MouseInNumberPickerBounds(int x, int y, SDL_NumberPicker * npk);
+int SDL_MouseInCheckBoxBounds(int x, int y, SDL_CheckBox * chb);
+int SDL_MouseInBox(int mouse_x, int mouse_y, int x1, int y1, int x2, int y2);
 
 /*Text declarations*/
 void SDL_DrawTextAtXYStretchedColorShadow(SDL_Renderer * renderer, const char * string, TTF_Font * font, int x, int y, int w, int h, SDL_Color color, SDL_Color shadowColor, int offset);
@@ -289,6 +324,13 @@ void SDL_UpdateNumberPicker(SDL_NumberPicker * npk);
 void SDL_NumberPickerHandleMouseover(SDL_NumberPicker * npk, int mouse_x, int mouse_y);
 void SDL_NumberPickerHandleClick(SDL_NumberPicker * npk, SDL_Event *e);
 void SDL_NumberPickerAutoAdjustButtons(SDL_NumberPicker *npk);
+
+/*Check box declarations*/
+SDL_CheckBox * SDL_CreateCheckBox(int x, int y, int w, int h, enum CheckBoxState startValue, TTF_Font * font, const char * caption);
+void SDL_DestroyCheckBox(SDL_CheckBox * chb);
+void SDL_RenderCheckBox(SDL_Renderer * pRenderer, SDL_CheckBox * chb);
+void SDL_UpdateCheckBox(SDL_CheckBox * chb);
+int	SDL_CheckHandleClick(SDL_CheckBox *chb, SDL_Event *e);
 
 /*Other declarations*/
 void SDL_DrawBoxGrid(SDL_Renderer * pRenderer, int x, int y, int wh, int n, int space, SDL_Color pBoxColor, SDL_Color pTextColor, TTF_Font *font);
@@ -311,6 +353,7 @@ SDL_Interface * SDL_InterfaceAddButton(SDL_Interface * interface, SDL_CustomButt
 SDL_Interface * SDL_InterfaceAddNumberPicker(SDL_Interface * interface, SDL_NumberPicker * npk);
 void SDL_UpdateInterface(SDL_Interface * pInterface);
 void SDL_InterfaceHandleMouseover(SDL_Interface *pInterface, int mx, int my);
+SDL_Interface * SDL_InterfaceAddCheckBox(SDL_Interface * interface, SDL_CheckBox * chkbx);
 
 /*Global variables*/
 SDL_Event				event;
@@ -326,8 +369,13 @@ int						FRIEND_RANGE;
 static const int		SCREEN_WIDTH = 400;
 static const int		SCREEN_HEIGHT = 400;
 int						LIVE_COUNT = 0;
+int						LIVE_COUNT_DISPLAY = 0;
 static const int		SOIL_VALUE_LIMIT = 255;
 bool					ANTFARM_ENABLED = 0;
+int						DELAY_VALUE = 30;
+int						timer[ 5 ] = {0};
+int						GLOW_ENABLED = 1;
+
 
 /*Program*/
 int main(int argc, char * argv[ ])
@@ -431,14 +479,17 @@ int main(int argc, char * argv[ ])
 		int key_released = 0;
 		int onMainMenu = true;
 
-		SDL_Interface *pIf = SDL_CreateInterfaceAtXY(10,150,SCREEN_WIDTH*.9, SCREEN_HEIGHT*.4);
+		SDL_Interface *pIf = SDL_CreateInterfaceAtXY(10,150,SCREEN_WIDTH*.9, SCREEN_HEIGHT*.6);
 		pIf->interfaceColumnNumber = 1;
-		pIf->interfaceItemPadding = 1;
+		pIf->interfaceItemPadding = 3;
 		pIf->interfaceLayoutType = IL_LIST;
 
 		/*Create menu items*/
 		SDL_NumberPicker * npUnderpopulationThreshold = SDL_CreateNumberPicker(10, 150, 60, 20, 0, 9, font, "Underpopulation Threshold");
 		npUnderpopulationThreshold->currentValue = 1;
+		SDL_NumberPicker * npFrameRate = SDL_CreateNumberPicker(10, 150, 60, 20, 10, 50, font, "Max Generations Per Second");
+		npFrameRate->currentValue = 30;
+		npFrameRate->incrementSize = 10;
 		SDL_NumberPicker * npOverpopulationThreshold = SDL_CreateNumberPicker(10, 150 + 25 * 1, 60, 20, 0, 9, font, "Overpopulation Threshold");
 		npOverpopulationThreshold->currentValue = 1;
 		SDL_NumberPicker * npRebirthThreshold = SDL_CreateNumberPicker(10, 150 + 25 * 2, 60, 20, 0, 9, font, "Birth Threshold");
@@ -447,6 +498,8 @@ int main(int argc, char * argv[ ])
 		npNeighborhoodSize->currentValue = 1;
 		SDL_CustomButton * mainMenuButton = SDL_CreateStandardButton(10, SCREEN_HEIGHT - 25, -1, -1, "<< MAIN MENU");
 		mainMenuButton->fadeSpeed = 50;
+		SDL_CheckBox * cbAntFarmEnable = SDL_CreateCheckBox(10, 10, 10, 10, CB_UNCHECKED, font, "Enable ant farm");
+		SDL_CheckBox * cbEnableColorGlow = SDL_CreateCheckBox(10, 10, 10, 10, CB_UNCHECKED, font, "Teknikolor");
 		SDL_CustomButton * quitProgramButton = SDL_CreateStandardButton(SCREEN_WIDTH - 128, SCREEN_HEIGHT - 25, -1, -1, "Exit Program");
 		SDL_CustomButton * startButton = SDL_CreateStandardButton(10, SCREEN_HEIGHT - 25, -1, -1, "Start Session");
 
@@ -455,6 +508,9 @@ int main(int argc, char * argv[ ])
 		SDL_InterfaceAddNumberPicker(pIf, npOverpopulationThreshold);
 		SDL_InterfaceAddNumberPicker(pIf, npRebirthThreshold);
 		SDL_InterfaceAddNumberPicker(pIf, npNeighborhoodSize);
+		SDL_InterfaceAddCheckBox(pIf, cbAntFarmEnable);
+		SDL_InterfaceAddCheckBox(pIf, cbEnableColorGlow);
+		SDL_InterfaceAddNumberPicker(pIf, npFrameRate);
 		SDL_InterfaceAddButton(pIf, startButton);
 		SDL_InterfaceAddButton(pIf, quitProgramButton);
 
@@ -489,6 +545,7 @@ int main(int argc, char * argv[ ])
 						SDL_NumberPickerHandleClick(npOverpopulationThreshold, &event);
 						SDL_NumberPickerHandleClick(npRebirthThreshold, &event);
 						SDL_NumberPickerHandleClick(npNeighborhoodSize, &event);
+						SDL_NumberPickerHandleClick(npFrameRate, &event);
 						if ( SDL_ButtonClicked(quitProgramButton, &event) )
 						{
 							gameRunning = false;
@@ -501,10 +558,29 @@ int main(int argc, char * argv[ ])
 							OVERPOP_NUMBER = npOverpopulationThreshold->currentValue;
 							FRIEND_RANGE = npNeighborhoodSize->currentValue;
 							REBIRTH_NUMBER = npRebirthThreshold->currentValue;
+							DELAY_VALUE = (double)1000/npFrameRate->currentValue;
+							if ( cbAntFarmEnable->state == CB_CHECKED )
+							{
+								ANTFARM_ENABLED = 1;
+							}
+							else
+							{
+								ANTFARM_ENABLED = 0;
+							}
+							if ( cbEnableColorGlow->state == CB_CHECKED )
+							{
+								GLOW_ENABLED = 1;
+							}
+							else
+							{
+								GLOW_ENABLED = 0;
+							}
 							onMainMenu = false;
 							sessionRunning = true;
 							break;
 						}
+						SDL_CheckHandleClick(cbAntFarmEnable, &event);
+						SDL_CheckHandleClick(cbEnableColorGlow, &event);
 					}
 				}
 
@@ -529,11 +605,14 @@ int main(int argc, char * argv[ ])
 
 			/* Life session loop */
 
+			Life_RandomizeDots(mainLifeDotArray, NROWS*NCOLS, 2);
+
 			while ( sessionRunning && gameRunning )
 			{
 				//	Go through the life session.
 
 				time_t start = time(NULL);
+				timer[ 0 ]++;
 
 				/*Get the event.*/
 				if ( SDL_PollEvent(&event) )
@@ -577,7 +656,12 @@ int main(int argc, char * argv[ ])
 				//	Draw text over the screen.
 				SDL_Color cWhite = { 255,255,255 };
 				char displayText[ 100 ];
-				sprintf_s(displayText, "live cells: %d", LIVE_COUNT);
+				if ( timer[ 0 ] > ( double ) 1000 / DELAY_VALUE / 2 )
+				{
+					LIVE_COUNT_DISPLAY = LIVE_COUNT;
+					timer[ 0 ] = 0;
+				}
+				sprintf_s(displayText, "live cells: %d", LIVE_COUNT_DISPLAY);
 				SDL_DrawTextShadow(renderer, displayText, font, 2, 2, cWhite, 1);
 
 				SDL_RenderButton(renderer, mainMenuButton);
@@ -602,6 +686,101 @@ int main(int argc, char * argv[ ])
 		TTF_CloseFont(font);
 		TTF_CloseFont(smaller_font);
 		TTF_Quit( );
+	}
+	return 0;
+}
+
+SDL_CheckBox * SDL_CreateCheckBox(int x, int y, int w, int h, enum CheckBoxState startValue, TTF_Font * font, const char * caption)
+{
+	SDL_CheckBox *chb = ( SDL_CheckBox* ) malloc(sizeof(SDL_CheckBox));
+	chb->bgColor = DEFAULT_BUTTON_BG_COLOR;
+	chb->ckColor = DEFAULT_BUTTON_TEXT_COLOR;
+	chb->fgColor = { 255,255,255,255 };
+	chb->h = h;
+	chb->w = w;
+	chb->padding = DEFAULT_BUTTON_PADDING;
+	chb->x = x;
+	chb->y = y;
+	chb->font = DEFAULT_BUTTON_FONT;
+	chb->shadowEnabled = true;
+	chb->shColor = DEFAULT_BUTTON_SHADOW_COLOR;
+	sprintf_s(chb->caption, MAX_BUTTON_STRING_LENGTH, "%s", caption);
+	return chb;
+}
+
+void SDL_DestroyCheckBox(SDL_CheckBox * chb)
+{
+	free(chb);
+}
+
+void SDL_RenderCheckBox(SDL_Renderer * pRenderer, SDL_CheckBox * chb)
+{
+	/*Render the empty box*/
+	SDL_DrawFillRectHelper(
+		pRenderer, 
+		chb->x, 
+		chb->y, 
+		chb->w, 
+		chb->h, 
+		chb->bgColor
+	);
+	SDL_DrawFillRectHelper(
+		pRenderer, 
+		chb->x + chb->padding, 
+		chb->y + chb->padding, 
+		chb->w - chb->padding * 2, 
+		chb->h - chb->padding * 2, 
+		chb->fgColor
+	);
+	if ( chb->state == CB_CHECKED )
+	{
+		SDL_DrawTextAtXYStretched(
+			pRenderer,
+			"X",
+			chb->font,
+			chb->x + chb->padding * 2,
+			chb->y + chb->padding * 2,
+			chb->w - chb->padding * 2 * 2,
+			chb->h - chb->padding * 2 * 2,
+			chb->ckColor
+		);
+	}
+	else
+	{
+		//	Do Nothing!
+	}
+	int text_width, text_height;
+	TTF_SizeText(chb->font, chb->caption, &text_width, &text_height);
+	SDL_DrawTextAtXYStretched(
+		pRenderer,
+		chb->caption,
+		chb->font,
+		chb->x + chb->w +chb->padding*2,
+		chb->padding+chb->y,
+		text_width,
+		chb->h - chb->padding,
+		chb->bgColor
+	);
+
+}
+
+void SDL_UpdateCheckBox(SDL_CheckBox * chb)
+{
+	//	Not much to do here.
+}
+
+int	SDL_CheckHandleClick(SDL_CheckBox *chb, SDL_Event *e)
+{
+	int mouse_x, mouse_y;
+	if ( e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT )
+	{
+		SDL_GetMouseState(&mouse_x, &mouse_y);
+		if ( SDL_MouseInCheckBoxBounds(mouse_x, mouse_y, chb) )
+		{
+			if ( chb->state == CB_CHECKED ) chb->state = CB_UNCHECKED;
+			else chb->state = CB_CHECKED;
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -646,6 +825,22 @@ SDL_Interface * SDL_InterfaceAddNumberPicker(SDL_Interface * interface, SDL_Numb
 	return interface;
 }
 
+
+/*Add existing check box to interface*/
+SDL_Interface * SDL_InterfaceAddCheckBox(SDL_Interface * interface, SDL_CheckBox * chkbx)
+{
+	SDL_InterfaceItemContainer *pTailCtn = SDL_GetInterfaceTail(interface);
+	SDL_InterfaceItemContainer *newCtn = SDL_CreateInterfaceItemContainer(IIT_CHB);
+	newCtn->chkbx = chkbx;
+	if ( !pTailCtn )
+		interface->pHead = newCtn;
+	else
+		pTailCtn->pNext = newCtn;
+	SDL_InterfaceAutoArrangeItems(interface);
+	return interface;
+}
+
+
 /* (WRAPPER) Add a button to the interface*/
 SDL_Interface * SDL_InterfaceAddNewButton(SDL_Interface *interface)
 {
@@ -657,6 +852,13 @@ SDL_Interface * SDL_InterfaceAddNewButton(SDL_Interface *interface)
 SDL_Interface * SDL_InterfaceAddNewNumberPicker(SDL_Interface *interface)
 {
 	SDL_InterfaceAddNewGenericItem(interface, IIT_NPK);
+	return interface;
+}
+
+/* (WRAPPER) Add a number picker to the interface*/
+SDL_Interface * SDL_InterfaceAddNewCheckBox(SDL_Interface *interface)
+{
+	SDL_InterfaceAddNewGenericItem(interface, IIT_CHB);
 	return interface;
 }
 
@@ -712,6 +914,10 @@ void SDL_DrawInterfaceItem(SDL_Renderer *pRenderer, SDL_InterfaceItemContainer *
 	case IIT_NPK:
 		if ( ctn->npk )
 			SDL_RenderNumberPicker(pRenderer, ctn->npk);
+		break;
+	case IIT_CHB:
+		if ( ctn->chkbx )
+			SDL_RenderCheckBox(pRenderer, ctn->chkbx);
 		break;
 	case IIT_NONE:
 	default:
@@ -769,6 +975,14 @@ void SDL_InterfaceAutoArrangeItems(SDL_Interface *interface)
 			ctn->npk->h = ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2;
 			SDL_NumberPickerAutoAdjustButtons(ctn->npk);
 		}
+		else if ( ctn->chkbx )
+		{
+			ctn->chkbx->x = interface->x + interface->interfaceMargin;
+			//	[Do not change width for now.]
+			ctn->chkbx->y = interface->y + ( double ) interface->interfaceTotalHeight * ( double ) itemsArranged / itemsToArrange + interface->interfaceMargin;
+			ctn->chkbx->h = ( double ) interface->interfaceTotalHeight / itemsToArrange - interface->interfaceItemPadding * 2;
+			ctn->chkbx->w = ctn->chkbx->h;
+		}
 		itemsArranged++;
 		ctn = ctn->pNext;
 	}
@@ -780,10 +994,13 @@ void SDL_UpdateInterface(SDL_Interface * pInterface)
 	SDL_InterfaceItemContainer * ctn = pInterface->pHead;
 	while ( ctn )
 	{
+		/*Update the button*/
 		if ( ctn->button )
 			SDL_UpdateButton(ctn->button);
 		if ( ctn->npk )
 			SDL_UpdateNumberPicker(ctn->npk);
+		if ( ctn->chkbx )
+			SDL_UpdateCheckBox(ctn->chkbx);
 		ctn = ctn->pNext;
 	}
 }
@@ -866,6 +1083,9 @@ void SDL_DestroyInterfaceItemContainer(SDL_InterfaceItemContainer *ctn)
 		break;
 	case IIT_NPK:
 		SDL_DestroyNumberPicker(ctn->npk);
+		break;
+	case IIT_CHB:
+		SDL_DestroyCheckBox(ctn->chkbx);
 		break;
 	case IIT_NONE:
 	default:
@@ -1463,6 +1683,10 @@ SDL_CustomButton * SDL_CreateButtonDetailed(
 	btn->fadeSpeed = -1;
 	btn->fadeValue = 0;
 
+	/*Set corner rounded values.*/
+	btn->cornersRounded = 0;
+	btn->cornerRadius = 0;
+
 	/*Set text*/
 	if ( !strcmp(pButtonText, "") )
 	{
@@ -1564,17 +1788,37 @@ void SDL_RenderButton(SDL_Renderer *pRenderer, SDL_CustomButton * pButton)
 	actualButtonColor.a = actualOpacity;
 	actualButtonTextColor.a = actualOpacity;
 	/*Draw the actual button body*/
-	SDL_DrawFillRectHelper(pRenderer, pButton->x, pButton->y, pButton->w, pButton->h, actualButtonColor);
-	SDL_DrawTextAtXYStretched(
-		pRenderer,
-		pButton->buttonText,
-		pButton->buttonFont,
-		pButton->x + pButton->buttonPadding,
-		pButton->y + pButton->buttonPadding,
-		pButton->w - pButton->buttonPadding * 2,
-		pButton->h - pButton->buttonPadding * 2,
-		actualButtonTextColor
-	);
+	if ( pButton->cornersRounded )
+	{
+		SDL_DrawFillRectRoundedHelper(pRenderer, pButton->x, pButton->y, pButton->w, pButton->h, actualButtonColor, pButton->cornerRadius);
+		SDL_DrawTextAtXYStretched(
+			pRenderer,
+			pButton->buttonText,
+			pButton->buttonFont,
+			pButton->x + pButton->buttonPadding + ( double ) pButton->cornerRadius / 2,
+			pButton->y + pButton->buttonPadding + ( double ) pButton->cornerRadius / 2,
+			pButton->w - pButton->buttonPadding * 2 - ( double ) pButton->cornerRadius / 2,
+			pButton->h - pButton->buttonPadding * 2 - ( double ) pButton->cornerRadius / 2,
+			actualButtonTextColor
+		);
+
+	}
+	else
+	{
+		SDL_DrawFillRectHelper(pRenderer, pButton->x, pButton->y, pButton->w, pButton->h, actualButtonColor);
+		SDL_DrawTextAtXYStretched(
+			pRenderer,
+			pButton->buttonText,
+			pButton->buttonFont,
+			pButton->x + pButton->buttonPadding,
+			pButton->y + pButton->buttonPadding,
+			pButton->w - pButton->buttonPadding * 2,
+			pButton->h - pButton->buttonPadding * 2,
+			actualButtonTextColor
+		);
+
+
+	}
 	return;
 }
 
@@ -1671,11 +1915,50 @@ void SDL_NumberPickerHandleClick(SDL_NumberPicker * npk, SDL_Event *e)
 /*Returns 1 if mouse is over button specified*/
 int SDL_MouseInButtonBounds(int x, int y, SDL_CustomButton * pButton)
 {
+	return SDL_MouseInBox(
+		x,
+		y,
+		pButton->x,
+		pButton->y,
+		pButton->x + pButton->w,
+		pButton->y + pButton->h
+	);
+}
+
+/*Returns 1 if mouse is over number picker specified*/
+int SDL_MouseInNumberPickerBounds(int x, int y, SDL_NumberPicker * npk)
+{
+	return SDL_MouseInBox(
+		x,
+		y,
+		npk->x,
+		npk->y,
+		npk->x + npk->w,
+		npk->y + npk->h
+	);
+}
+
+/*Returns 1 if mouse is over check box specified*/
+int SDL_MouseInCheckBoxBounds(int x, int y, SDL_CheckBox * chb)
+{
+	return SDL_MouseInBox(
+		x,
+		y,
+		chb->x,
+		chb->y,
+		chb->x + chb->w,
+		chb->y + chb->h
+	);
+}
+
+/*Returns 1 if the mouse is in the box*/
+int SDL_MouseInBox(int mouse_x, int mouse_y, int x1, int y1, int x2, int y2)
+{
 	if (
-		x >= pButton->x &&
-		x <= pButton->x + pButton->w &&
-		y >= pButton->y &&
-		y <= pButton->y + pButton->h
+		mouse_x >= x1 &&
+		mouse_x <= x2 &&
+		mouse_y >= y1 &&
+		mouse_y <= y2
 		)
 	{
 		return 1;
@@ -1988,7 +2271,7 @@ void Life_DrawDot(Dot * dots, int i, SDL_Renderer * pRenderer, int isSoil)
 		int alpha = ( int ) ( 255 * PHI*PHI ); // #goldenratio?!??
 
 		/*Draw two extra rectangles behind the white part to simulate glow.*/
-		if ( GLOW_ENABLE && !isSoil )
+		if ( GLOW_ENABLED && !isSoil )
 		{
 			/*Draw a 1x3 rectangle*/
 			SDL_Color color = { dots[ i ].color.r, dots[ i ].color.g, dots[ i ].color.b, alpha };
@@ -2056,4 +2339,47 @@ void SDL_DrawFillRectHelper(SDL_Renderer *pRenderer, int x, int  y, int w, int h
 		pColor.a
 	);
 	SDL_RenderFillRect(pRenderer, &rect);
+}
+
+/*Helper function for drawing rectangles.*/
+void SDL_DrawFillRectHelperColorless(SDL_Renderer *pRenderer, int x, int  y, int w, int h)
+{
+	SDL_Rect rect;
+	rect.w = w;
+	rect.h = h;
+	rect.x = x;
+	rect.y = y;
+	SDL_RenderFillRect(pRenderer, &rect);
+}
+
+void SDL_DrawFillCircleHelper(SDL_Renderer *pRenderer, int x, int y, int r)
+{
+	int r_squared = r * r;
+	for ( int i = -r-1; i < r+1; i++ )
+	{
+		for ( int j = -r-1; j < r+1; j++ )
+		{
+			if ( i * i + j * j < r_squared )
+			{
+				SDL_RenderDrawPoint(pRenderer, x+i, y+j);
+			}
+		}
+	}
+}
+
+void SDL_DrawFillRectRoundedHelper(SDL_Renderer *pRenderer, int x, int y, int w, int h, SDL_Color pColor, int radius)
+{
+	SDL_SetRenderDrawColor(
+		pRenderer,
+		pColor.r,
+		pColor.g,
+		pColor.b,
+		pColor.a
+	);
+	SDL_DrawFillRectHelperColorless(pRenderer, x + radius, y, w - ( radius * 2 ), h);
+	SDL_DrawFillRectHelperColorless(pRenderer, x, y + radius, w, h - ( radius * 2 ));
+	SDL_DrawFillCircleHelper(pRenderer, x + radius, y + radius, radius);
+	SDL_DrawFillCircleHelper(pRenderer, x + radius, y + h - radius, radius);
+	SDL_DrawFillCircleHelper(pRenderer, x + w - radius, y + radius, radius);
+	SDL_DrawFillCircleHelper(pRenderer, x + w - radius, y + h - radius, radius);
 }
