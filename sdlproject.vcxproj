@@ -125,6 +125,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="handycolors.c" />
+    <ClCompile Include="life.c" />
+    <ClCompile Include="life_constants.c" />
     <ClCompile Include="rgb2hsv.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="sdl_color_ops_dd.c" />
@@ -135,6 +137,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="handycolors.h" />
+    <ClInclude Include="life.h" />
+    <ClInclude Include="life_constants.h" />
     <ClInclude Include="rgb2hsv.h" />
     <ClInclude Include="sdl_color_ops_dd.h" />
     <ClInclude Include="sdl_helpers_dd.h" />

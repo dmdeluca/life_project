@@ -39,6 +39,12 @@
     <ClCompile Include="handycolors.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="life_constants.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="life.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rgb2hsv.h">
@@ -60,6 +66,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="sdl_helpers_dd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="life_constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="life.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
