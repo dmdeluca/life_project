@@ -142,15 +142,15 @@ void LS_SetSoilColor(LifeSetting *ls, SDL_Color color)
 	ls->SOIL_COLOR.a = color.a;
 }
 
-void Life_UpdateSoil(Dot * pLifeDotArray, Dot * pSoilDotArray, LifeSetting settings)
+void Life_UpdateSoil(Dot * pLifeDotArray, Dot * pSoilDotArray, LifeSetting *settings)
 {
-	for ( int i = 0; i < settings.N_ROWS*settings.N_COLS; i++ )
+	for ( int i = 0; i < settings->N_ROWS*settings->N_COLS; i++ )
 	{
 		if ( pLifeDotArray[ i ].value )
 		{
 			pSoilDotArray[ i ].value = 0;
 		}
-		else if ( pSoilDotArray[ i ].value < settings.SOIL_VALUE_LIMIT)
+		else if ( pSoilDotArray[ i ].value < settings->SOIL_VALUE_LIMIT)
 		{
 			pSoilDotArray[ i ].value += 1;
 		}
@@ -158,28 +158,28 @@ void Life_UpdateSoil(Dot * pLifeDotArray, Dot * pSoilDotArray, LifeSetting setti
 }
 
 /* Revive a square at (x,y). */
-void Life_PutHandOfGodAtXY(int x, int y, Dot * dots, LifeSetting settings)
+void Life_PutHandOfGodAtXY(int x, int y, Dot * dots, LifeSetting *settings)
 {
 	int index = Life_GetIndexByXY(x, y, settings);
-	for ( int i = 0; i < settings.HOGSIZE*settings.HOGSIZE; i++ )
+	for ( int i = 0; i < settings->HOGSIZE*settings->HOGSIZE; i++ )
 	{
-		Life_ActivateDotByIndex(getMin(2, index + i / settings.HOGSIZE * settings.N_COLS + i % settings.HOGSIZE, settings.N_ROWS*settings.N_COLS - 1), dots, settings);
+		Life_ActivateDotByIndex(getMin(2, index + i / settings->HOGSIZE * settings->N_COLS + i % settings->HOGSIZE, settings->N_ROWS*settings->N_COLS - 1), dots, settings);
 	}
 }
 
 /*Find the index of a dot in the array by its XY value.*/
-int Life_GetIndexByXY(int x, int y, LifeSetting settings)
+int Life_GetIndexByXY(int x, int y, LifeSetting *settings)
 {
-	return ( int ) ceil(x / ( double ) settings.SCREEN_WIDTH*( settings.N_COLS )) + ( int ) ceil(y / ( double ) settings.SCREEN_HEIGHT*( settings.N_ROWS ))*settings.N_COLS;
+	return ( int ) ceil(x / ( double ) settings->SCREEN_WIDTH*( settings->N_COLS )) + ( int ) ceil(y / ( double ) settings->SCREEN_HEIGHT*( settings->N_ROWS ))*settings->N_COLS;
 }
 
 /*Revive a dot at a certain index in the dot array.*/
-void Life_ActivateDotByIndex(int i, Dot * dots, LifeSetting settings)
+void Life_ActivateDotByIndex(int i, Dot * dots, LifeSetting *settings)
 {
 	if ( !dots[ i ].value )
 	{
 		dots[ i ].value = 1;
-		*(settings.LIVE_COUNT_PTR) += 1;
+		*(settings->LIVE_COUNT_PTR) += 1;
 	}
 	else
 	{
@@ -188,10 +188,10 @@ void Life_ActivateDotByIndex(int i, Dot * dots, LifeSetting settings)
 }
 
 /*Kill a dot at a certain index in the dot array.*/
-void Life_KillDotByIndex(int i, Dot * dots, LifeSetting settings)
+void Life_KillDotByIndex(int i, Dot * dots, LifeSetting *settings)
 {
 	dots[ i ].value = 0;
-	*( settings.LIVE_COUNT_PTR ) -= 1;
+	*( settings->LIVE_COUNT_PTR ) -= 1;
 }
 
 /*Set all dots in an array of dots to a certain specified value.*/
@@ -205,30 +205,30 @@ void Life_SetAllDots(Dot * dots, int nIndices, int value)
 }
 
 /*Set all dots to a random value between 0 and @param max.*/
-void Life_RandomizeDots(Dot * dots, int nIndices, int max, LifeSetting settings)
+void Life_RandomizeDots(Dot * dots, int nIndices, int max, LifeSetting *settings)
 {
-	*(settings.LIVE_COUNT_PTR) = 0;
+	*(settings->LIVE_COUNT_PTR) = 0;
 	for ( int i = 0; i < nIndices; i++ )
 	{
 		dots[ i ].value = rand( ) % max;
 		if ( dots[ i ].value )
-			*(settings.LIVE_COUNT_PTR) += 1;
+			*(settings->LIVE_COUNT_PTR) += 1;
 		dots[ i ].color = randomColor( );
 	}
 }
 
 /*Calculate new values for current dot array and then update the values.*/
-void Life_IterateGeneration(Dot * dots, Dot * new_dots, LifeSetting settings)
+void Life_IterateGeneration(Dot * dots, Dot * new_dots, LifeSetting *settings)
 {
 	Life_CalculateAllNewDotValues(dots, new_dots,settings);
 	Life_UpdateDotValues(dots, new_dots, settings);
 }
 
 /*Calculate new values for all dots in the array.*/
-void Life_CalculateAllNewDotValues(Dot * dots, Dot * new_dots, LifeSetting settings)
+void Life_CalculateAllNewDotValues(Dot * dots, Dot * new_dots, LifeSetting *settings)
 {
 	Dot new_dot;
-	for ( int i = 0; i < settings.N_ROWS*settings.N_COLS; i++ )
+	for ( int i = 0; i < settings->N_ROWS*settings->N_COLS; i++ )
 	{
 		new_dot = Life_CalculateNewDotValue(dots, i,settings);
 		new_dots[ i ].value = new_dot.value;
@@ -238,23 +238,23 @@ void Life_CalculateAllNewDotValues(Dot * dots, Dot * new_dots, LifeSetting setti
 
 
 /* Calculate new value for a single dot in the array.*/
-Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings)
+Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting *settings)
 {
 	/*Capture the dot of interest.*/
 	Dot newDot = dots[ i ];
 	/*Store the old value and color of the dot.*/
 	int oldValue = dots[ i ].value;
 	/*Create a friendmap structure of nearby friends so that color averaging is possible later.*/
-	FriendMap * fMap = Life_CreateFriendMap(dots, i, settings.N_COLS,settings);
+	FriendMap * fMap = Life_CreateFriendMap(dots, i, settings->N_COLS,settings);
 	/*Capture number of friends, then evaluate.*/
 	int numFriends = ( int ) round(fMap->count);
 	if ( oldValue != 0 ) //	meaning the cell is ALIVE
 	{
-		if ( numFriends < settings.UP_THRESH || numFriends > settings.OP_THRESH )
+		if ( numFriends < settings->UP_THRESH || numFriends > settings->OP_THRESH )
 		{
 			/*Cell has died due to under- or overpopulation.*/
 			newDot.value = 0;
-			*(settings.LIVE_COUNT_PTR)-= 1;
+			*(settings->LIVE_COUNT_PTR)-= 1;
 		}
 		else
 		{
@@ -273,23 +273,23 @@ Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings)
 			{
 				/*Cell has died due to loss of vitality.*/
 				newDot.value = 0;
-				*(settings.LIVE_COUNT_PTR) -= 1;
+				*(settings->LIVE_COUNT_PTR) -= 1;
 			}
 		}
 	}
 	else
 	{
 		/*Cell is currently dead.*/
-		if ( numFriends == settings.RB_NUMBER)
+		if ( numFriends == settings->RB_NUMBER)
 		{
 			/*Cell is born.*/
 			newDot.value = 1;
-			*(settings.LIVE_COUNT_PTR) += 1;
+			*(settings->LIVE_COUNT_PTR) += 1;
 
 			/*Cell becomes the average of its [rebirth_number] parents colors.*/
-			SDL_Color *friendColorArray = ( SDL_Color* ) malloc(settings.RB_NUMBER * sizeof(SDL_Color));
+			SDL_Color *friendColorArray = ( SDL_Color* ) malloc(settings->RB_NUMBER * sizeof(SDL_Color));
 			int friendColorIndex = 0;
-			for ( int k = 0; k < fMap->size && friendColorIndex < settings.RB_NUMBER; k++ )
+			for ( int k = 0; k < fMap->size && friendColorIndex < settings->RB_NUMBER; k++ )
 			{
 				if ( fMap->dotArray[ k ].value )
 				{
@@ -298,28 +298,28 @@ Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings)
 				}
 			}
 			/*Not sure how to do this*/
-			switch ( settings.RB_NUMBER )
+			switch ( settings->RB_NUMBER )
 			{
 			case 1:
 				newDot.color = friendColorArray[ 0 ];
 				break;
 			case 2:
 				newDot.color = averageColor(
-					settings.RB_NUMBER,
+					settings->RB_NUMBER,
 					friendColorArray[ 0 ],
 					friendColorArray[ 1 ]
 				);
 				break;
 			case 3:
 				newDot.color = averageColor(
-					settings.RB_NUMBER,
+					settings->RB_NUMBER,
 					friendColorArray[ 0 ],
 					friendColorArray[ 1 ],
 					friendColorArray[ 2 ]
 				);				break;
 			case 4:
 				newDot.color = averageColor(
-					settings.RB_NUMBER,
+					settings->RB_NUMBER,
 					friendColorArray[ 0 ],
 					friendColorArray[ 1 ],
 					friendColorArray[ 2 ],
@@ -327,7 +327,7 @@ Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings)
 				);				break;
 			case 5:
 				newDot.color = averageColor(
-					settings.RB_NUMBER,
+					settings->RB_NUMBER,
 					friendColorArray[ 0 ],
 					friendColorArray[ 1 ],
 					friendColorArray[ 2 ],
@@ -341,7 +341,7 @@ Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings)
 			case 9:
 			default:
 				newDot.color = averageColor(
-					settings.RB_NUMBER,
+					settings->RB_NUMBER,
 					friendColorArray[ 0 ],
 					friendColorArray[ 1 ],
 					friendColorArray[ 2 ],
@@ -354,7 +354,7 @@ Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings)
 			SDL_ColorAdjHSV(&newDot.color, 10, 0.1, 0.1);
 			free(friendColorArray);
 		}
-		else if ( rand( ) % ( settings.CHANCE_OF_MIRACLE+ 1 ) < settings.CHANCE_OF_MIRACLE - 1 )
+		else if ( rand( ) % ( settings->CHANCE_OF_MIRACLE+ 1 ) < settings->CHANCE_OF_MIRACLE - 1 )
 		{
 			/*Cell remains dead.*/
 			newDot.value = 0;
@@ -364,7 +364,7 @@ Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings)
 		{
 			/*Immaculate conception.*/
 			newDot.value = 1;
-			*(settings.LIVE_COUNT_PTR)+= 1;
+			*(settings->LIVE_COUNT_PTR)+= 1;
 			newDot.color = randomColor( );
 		}
 	}
@@ -381,17 +381,17 @@ void Life_FreeFriendMap(FriendMap* pFriendMap)
 }
 
 /*Allocate memory for friend map structure, fill it, and return it.*/
-FriendMap * Life_CreateFriendMap(Dot * pDotArray, int pIndex, int pRowLength, LifeSetting settings)
+FriendMap * Life_CreateFriendMap(Dot * pDotArray, int pIndex, int pRowLength, LifeSetting *settings)
 {
 	/*Create the friend map.*/
 	FriendMap * fMap = ( FriendMap* ) malloc(sizeof(FriendMap));
 	/*Populate the friend map.*/
-	Life_FillFriendMap(fMap, settings.NH_SIZE, pDotArray, pIndex, pRowLength, settings);
+	Life_FillFriendMap(fMap, settings->NH_SIZE, pDotArray, pIndex, pRowLength, settings);
 	/*Return the friend map.*/
 	return fMap;
 }
 
-void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, LifeSetting settings)
+void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, LifeSetting *settings)
 {
 	pFriendMap->size = ( 2 * pFriendRange + 1 )*( 2 * pFriendRange + 1 );
 	/*EG If friend range is 1, size is 9. If friend range is 2, size is 25*/
@@ -407,7 +407,7 @@ void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArra
 	int fmap_width = 2 * pFriendRange + 1;
 	for ( int i = 0; i < pFriendMap->size; i++ )
 	{
-		int offset_index = ( pIndex - pFriendRange + i % fmap_width + ( i / fmap_width - pFriendRange )*pRowLength + settings.N_ROWS*settings.N_COLS ) % ( settings.N_ROWS*settings.N_COLS );
+		int offset_index = ( pIndex - pFriendRange + i % fmap_width + ( i / fmap_width - pFriendRange )*pRowLength + settings->N_ROWS*settings->N_COLS ) % ( settings->N_ROWS*settings->N_COLS );
 		if ( i != pFriendMap->size / 2 && pDotArray[ offset_index ].value )
 		{
 			pFriendMap->dotArray[ i ] = pDotArray[ offset_index ];
@@ -424,9 +424,9 @@ void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArra
 }
 
 /*Update all values for dot array.*/
-void Life_UpdateDotValues(Dot * pDotArray, Dot * pUpdateDotArray, LifeSetting settings)
+void Life_UpdateDotValues(Dot * pDotArray, Dot * pUpdateDotArray, LifeSetting *settings)
 {
-	for ( int i = 0; i < settings.N_ROWS*settings.N_COLS; i++ )
+	for ( int i = 0; i < settings->N_ROWS*settings->N_COLS; i++ )
 	{
 		/* Calculate new values. */
 		pDotArray[ i ].value = pUpdateDotArray[ i ].value;
@@ -435,20 +435,20 @@ void Life_UpdateDotValues(Dot * pDotArray, Dot * pUpdateDotArray, LifeSetting se
 }
 
 /*Draw all dots in dot array.*/
-void Life_DrawAllDots(Dot * pDotArray, SDL_Renderer * pRenderer, LifeSetting settings)
+void Life_DrawAllDots(Dot * pDotArray, SDL_Renderer * pRenderer, LifeSetting *settings)
 {
 	Life_DrawAllDots_Internal(
 		pDotArray, 
 		pRenderer, 
-		settings.N_ROWS, 
-		settings.N_COLS, 
-		settings.SCREEN_WIDTH, 
-		settings.SCREEN_HEIGHT, 
-		settings.MAX_VALUE, 
-		settings.DOT_COLOR,
-		settings.SOIL_COLOR,
+		settings->N_ROWS, 
+		settings->N_COLS, 
+		settings->SCREEN_WIDTH, 
+		settings->SCREEN_HEIGHT, 
+		settings->MAX_VALUE, 
+		settings->DOT_COLOR,
+		settings->SOIL_COLOR,
 		0,
-		settings.GLOW_ENABLED
+		settings->GLOW_ENABLED
 	);
 }
 
@@ -546,20 +546,20 @@ void Life_DrawDot(Dot * dots, int i,   SDL_Renderer * pRenderer,  int rows,	  in
 }
 
 /*Draw soil in soil array.*/
-void Life_DrawSoil(Dot * soilArray, SDL_Renderer * pRenderer, LifeSetting settings)
+void Life_DrawSoil(Dot * soilArray, SDL_Renderer * pRenderer, LifeSetting *settings)
 {
 	Life_DrawAllDots_Internal(
 		soilArray,
 		pRenderer,
-		settings.N_ROWS,
-		settings.N_COLS,
-		settings.SCREEN_WIDTH,
-		settings.SCREEN_HEIGHT,
-		settings.MAX_VALUE,
-		settings.DOT_COLOR,
-		settings.SOIL_COLOR,
+		settings->N_ROWS,
+		settings->N_COLS,
+		settings->SCREEN_WIDTH,
+		settings->SCREEN_HEIGHT,
+		settings->MAX_VALUE,
+		settings->DOT_COLOR,
+		settings->SOIL_COLOR,
 		1,
-		settings.GLOW_ENABLED
+		settings->GLOW_ENABLED
 	);
 }
 

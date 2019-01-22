@@ -70,26 +70,26 @@ void LS_SetChanceOfMiracle(LifeSetting *ls, int input);
 void LS_SetDotStartValue(LifeSetting *ls, int input);
 
 /*Friend map declarations*/
-FriendMap * Life_CreateFriendMap(Dot * pDotArray, int pIndex, int pRowLength, LifeSetting settings);
-void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, LifeSetting settings);
+FriendMap * Life_CreateFriendMap(Dot * pDotArray, int pIndex, int pRowLength, LifeSetting *settings);
+void Life_FillFriendMap(FriendMap * pFriendMap, int pFriendRange, Dot * pDotArray, int pIndex, int pRowLength, LifeSetting *settings);
 void		Life_FreeFriendMap(FriendMap* fmap);
 
-Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting settings);
+Dot Life_CalculateNewDotValue(Dot * dots, int i, LifeSetting *settings);
 
 /*Life declarations*/
-void Life_RandomizeDots(Dot * dots, int nIndices, int max, LifeSetting settings);
-void Life_IterateGeneration(Dot * dots, Dot * new_dots, LifeSetting settings);
-void Life_CalculateAllNewDotValues(Dot * dots, Dot * new_dots, LifeSetting settings);
-void Life_UpdateDotValues(Dot * pDotArray, Dot * pUpdateDotArray, LifeSetting settings);
-void Life_DrawAllDots(Dot * dots, SDL_Renderer * renderer, LifeSetting settings);
+void Life_RandomizeDots(Dot * dots, int nIndices, int max, LifeSetting *settings);
+void Life_IterateGeneration(Dot * dots, Dot * new_dots, LifeSetting *settings);
+void Life_CalculateAllNewDotValues(Dot * dots, Dot * new_dots, LifeSetting *settings);
+void Life_UpdateDotValues(Dot * pDotArray, Dot * pUpdateDotArray, LifeSetting *settings);
+void Life_DrawAllDots(Dot * dots, SDL_Renderer * renderer, LifeSetting *settings);
 void Life_DrawDot(Dot * dots, int i, SDL_Renderer * pRenderer, int rows, int cols, int screenw, int screenh, int max_val, SDL_Color dotcolor, SDL_Color soilColor, int isSoil, int glow);
-void Life_ActivateDotByIndex(int i, Dot * dots, LifeSetting settings);
-void Life_DrawSoil(Dot * dots, SDL_Renderer * renderer, LifeSetting settings);
-void Life_KillDotByIndex(int i, Dot * dots, LifeSetting settings);
-int Life_GetIndexByXY(int x, int y, LifeSetting settings);
-void Life_PutHandOfGodAtXY(int x, int y, Dot * dots, LifeSetting settings);
+void Life_ActivateDotByIndex(int i, Dot * dots, LifeSetting *settings);
+void Life_DrawSoil(Dot * dots, SDL_Renderer * renderer, LifeSetting *settings);
+void Life_KillDotByIndex(int i, Dot * dots, LifeSetting *settings);
+int Life_GetIndexByXY(int x, int y, LifeSetting *settings);
+void Life_PutHandOfGodAtXY(int x, int y, Dot * dots, LifeSetting *settings);
 void Life_SetAllDots(Dot * dots, int nIndices, int value);
-void Life_UpdateSoil(Dot * pLifeDotArray, Dot * pSoilDotArray, LifeSetting settings);
+void Life_UpdateSoil(Dot * pLifeDotArray, Dot * pSoilDotArray, LifeSetting *settings);
 Dot * Life_CreateDotArray(int array_size);
 void Life_DestroyDotArray(Dot * dotArray);
 void Life_DrawAllDots_Internal(Dot * pDotArray, SDL_Renderer * pRenderer, int rows, int cols, int screenw, int screenh, int max_val, SDL_Color dotcolor, SDL_Color soilColor, int isSoil, int glow);
