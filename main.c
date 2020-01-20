@@ -1,11 +1,10 @@
-#include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "SDL.h"
 #include <time.h>
 #include <math.h>
 #include <stdarg.h>
-#include <SDL_ttf.h>
+#include "SDL_ttf.h"
 #include <string.h>
 
 /*My header files*/

@@ -75,4 +75,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\..\..\SDL\SDL2\lib\x64\SDL2.lib" />
+    <Library Include="..\..\..\..\SDL\SDL2\lib\x64\SDL2main.lib" />
+    <Library Include="..\..\..\..\SDL\sdl ttf include and lib\lib\x64\SDL2_ttf.lib" />
+  </ItemGroup>
 </Project>
